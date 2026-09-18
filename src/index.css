@@ -52,18 +52,18 @@
 
 html, body {
   width: 100%;
-  height: 100%;
+  min-height: 100%;
   background-color: #071224;
   color: var(--app-text);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow: hidden;
 }
 
 #root {
   width: 100%;
-  height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -74,8 +74,8 @@ html, body {
 .mobile-app-root {
   width: 100%;
   max-width: 480px;
-  height: 100dvh;
   height: 100vh;
+  height: 100dvh;
   background: var(--app-bg);
   position: relative;
   display: flex;
@@ -85,20 +85,27 @@ html, body {
 }
 
 @media (max-width: 480px) {
+  #root {
+    background: var(--app-bg);
+    align-items: stretch;
+  }
   .mobile-app-root {
     max-width: 100%;
+    height: 100vh;
+    height: 100dvh;
     box-shadow: none;
   }
 }
 
-/* Scrollable Main Viewport */
+/* Scrollable Main Viewport with bottom clearance */
 .app-viewport {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
   scroll-behavior: smooth;
-  padding-bottom: 74px; /* Space for bottom nav */
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 16px));
 }
 
 .app-viewport::-webkit-scrollbar {
@@ -113,10 +120,21 @@ html, body {
    MAKEMYTRIP APP TOP BAR (HERO GRADIENT)
    ========================================================= */
 
+.app-header {
+  padding: max(14px, env(safe-area-inset-top, 14px)) 18px 10px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--app-bg);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
 .mmt-hero-header {
   background: linear-gradient(135deg, #0A58CA 0%, #003B95 100%);
   color: white;
-  padding: 16px 18px 18px 18px;
+  padding: max(16px, env(safe-area-inset-top, 16px)) 18px 18px 18px;
   border-bottom-left-radius: 20px;
   border-bottom-right-radius: 20px;
   box-shadow: 0 4px 15px rgba(10, 88, 202, 0.25);
@@ -190,9 +208,9 @@ html, body {
   background: rgba(255, 255, 255, 0.25);
 }
 
-.mmt-icon-btn {
-  width: 34px;
-  height: 34px;
+.mmt-icon-btn, .icon-btn {
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.25);
@@ -205,7 +223,14 @@ html, body {
   font-size: 0.9rem;
 }
 
-.mmt-icon-badge {
+.app-header .icon-btn {
+  background: white;
+  border-color: var(--app-border);
+  color: var(--app-text);
+  box-shadow: var(--shadow-xs);
+}
+
+.mmt-icon-badge, .icon-badge {
   position: absolute;
   top: 4px;
   right: 4px;
@@ -214,6 +239,10 @@ html, body {
   background: #FF5252;
   border-radius: 50%;
   border: 1.5px solid #003B95;
+}
+
+.app-header .icon-badge {
+  border-color: white;
 }
 
 /* MakeMyTrip Search Card (Elevated Floating Box) */
@@ -234,7 +263,7 @@ html, body {
   gap: 10px;
 }
 
-.mmt-search-input-box {
+.mmt-search-input-box, .search-box {
   flex: 1;
   display: flex;
   align-items: center;
@@ -245,7 +274,7 @@ html, body {
   gap: 8px;
 }
 
-.mmt-search-input-box input {
+.mmt-search-input-box input, .search-box input {
   border: none;
   outline: none;
   background: transparent;
@@ -255,11 +284,11 @@ html, body {
   font-family: var(--font-body);
 }
 
-.mmt-search-input-box input::placeholder {
+.mmt-search-input-box input::placeholder, .search-box input::placeholder {
   color: var(--app-muted);
 }
 
-.mmt-filter-btn {
+.mmt-filter-btn, .filter-trigger-btn {
   background: var(--primary);
   color: white;
   border: none;
@@ -279,11 +308,11 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 8px;
+  padding: 8px 10px;
   background: #F0F6FF;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
 }
 
 .mmt-dest-label {
@@ -304,7 +333,7 @@ html, body {
    CATEGORY TABS (MAKEMYTRIP STYLE)
    ========================================================= */
 
-.mmt-category-scroll {
+.mmt-category-scroll, .categories-slider {
   display: flex;
   gap: 8px;
   padding: 16px 18px 10px 18px;
@@ -313,11 +342,11 @@ html, body {
   -webkit-overflow-scrolling: touch;
 }
 
-.mmt-category-scroll::-webkit-scrollbar {
+.mmt-category-scroll::-webkit-scrollbar, .categories-slider::-webkit-scrollbar {
   display: none;
 }
 
-.mmt-cat-pill {
+.mmt-cat-pill, .cat-chip {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -334,7 +363,7 @@ html, body {
   box-shadow: var(--shadow-xs);
 }
 
-.mmt-cat-pill.active {
+.mmt-cat-pill.active, .cat-chip.active {
   background: var(--mmt-blue);
   color: white;
   border-color: var(--mmt-blue);
@@ -395,39 +424,69 @@ html, body {
   white-space: nowrap;
 }
 
+/* Section Header */
+.section-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 18px 12px 18px;
+}
+
+.section-heading {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #1A2B49;
+}
+
+.see-all-link {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-decoration: none;
+  cursor: pointer;
+}
+
 /* =========================================================
    HOTEL CARDS (MAKEMYTRIP PROPERTY DESIGN)
    ========================================================= */
 
-.mmt-hotel-card {
+.hotels-list {
+  padding: 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.mmt-hotel-card, .hotel-card {
   background: white;
   border-radius: var(--radius-lg);
   border: 1px solid var(--app-border);
-  margin-bottom: 16px;
   overflow: hidden;
   box-shadow: var(--shadow-sm);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
 }
 
-.mmt-hotel-card:hover {
+.mmt-hotel-card:hover, .hotel-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
-.mmt-card-image-area {
+.mmt-card-image-area, .hotel-image-wrapper {
   position: relative;
   height: 180px;
   background: #E2E8F0;
 }
 
-.mmt-card-image-area img {
+.mmt-card-image-area img, .hotel-image-wrapper img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.mmt-assured-tag {
+.mmt-assured-tag, .tag-featured {
   position: absolute;
   top: 10px;
   left: 10px;
@@ -444,14 +503,14 @@ html, body {
   box-shadow: 0 2px 6px rgba(0,0,0,0.25);
 }
 
-.mmt-fav-btn {
+.mmt-fav-btn, .fav-btn {
   position: absolute;
   top: 10px;
   right: 10px;
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.92);
   border: none;
   display: flex;
   align-items: center;
@@ -461,11 +520,11 @@ html, body {
   box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
-.mmt-fav-btn.is-fav {
+.mmt-fav-btn.is-fav, .fav-btn.is-fav {
   color: #E53935;
 }
 
-.mmt-card-body {
+.mmt-card-body, .hotel-info-block {
   padding: 14px;
 }
 
@@ -477,7 +536,7 @@ html, body {
   margin-bottom: 4px;
 }
 
-.mmt-hotel-name {
+.mmt-hotel-name, .hotel-title {
   font-family: var(--font-heading);
   font-size: 1.05rem;
   font-weight: 700;
@@ -498,7 +557,7 @@ html, body {
   white-space: nowrap;
 }
 
-.mmt-location-text {
+.mmt-location-text, .hotel-location {
   font-size: 0.76rem;
   color: var(--app-muted);
   margin-bottom: 8px;
@@ -535,7 +594,7 @@ html, body {
   border-radius: var(--radius-xs);
 }
 
-.mmt-price-section {
+.mmt-price-section, .hotel-price-row {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
@@ -548,13 +607,13 @@ html, body {
   flex-direction: column;
 }
 
-.mmt-price-strike {
+.mmt-price-strike, .room-original-price {
   font-size: 0.75rem;
   text-decoration: line-through;
   color: var(--app-muted);
 }
 
-.mmt-price-main {
+.mmt-price-main, .price-amount {
   font-family: var(--font-heading);
   font-size: 1.25rem;
   font-weight: 800;
@@ -566,7 +625,7 @@ html, body {
   color: var(--app-muted);
 }
 
-.mmt-select-room-btn {
+.mmt-select-room-btn, .book-quick-btn {
   background: var(--primary);
   color: white;
   border: none;
@@ -578,7 +637,7 @@ html, body {
   transition: all 0.2s ease;
 }
 
-.mmt-select-room-btn:hover {
+.mmt-select-room-btn:hover, .book-quick-btn:hover {
   background: var(--primary-hover);
 }
 
@@ -598,9 +657,9 @@ html, body {
   object-fit: cover;
 }
 
-.mmt-detail-top-nav {
+.mmt-detail-top-nav, .detail-nav-bar {
   position: absolute;
-  top: 12px;
+  top: max(12px, env(safe-area-inset-top, 12px));
   left: 12px;
   right: 12px;
   display: flex;
@@ -608,10 +667,38 @@ html, body {
   z-index: 20;
 }
 
+.detail-nav-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.gallery-counter-badge {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+}
+
 .mmt-detail-content {
   background: var(--app-bg);
   padding: 16px;
-  padding-bottom: 100px; /* clearance for sticky book bar */
+  padding-bottom: calc(110px + env(safe-area-inset-bottom, 20px));
 }
 
 .mmt-detail-card {
@@ -663,31 +750,44 @@ html, body {
 }
 
 /* Room Selection Card */
-.mmt-room-card {
+.mmt-room-card, .room-card {
   background: white;
   border: 1px solid var(--app-border);
   border-radius: var(--radius-md);
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   overflow: hidden;
   box-shadow: var(--shadow-xs);
 }
 
-.mmt-room-image-bar {
+.mmt-room-image-bar, .room-image-area {
   position: relative;
-  height: 140px;
+  height: 145px;
 }
 
-.mmt-room-image-bar img {
+.mmt-room-image-bar img, .room-image-area img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.mmt-room-body {
-  padding: 12px;
+.room-type-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(4px);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
 }
 
-.mmt-room-title {
+.mmt-room-body, .room-details-body {
+  padding: 12px 14px;
+}
+
+.mmt-room-title, .room-name {
   font-family: var(--font-heading);
   font-size: 1rem;
   font-weight: 700;
@@ -695,8 +795,9 @@ html, body {
   margin-bottom: 6px;
 }
 
-.mmt-room-features {
+.mmt-room-features, .room-specs-row {
   display: flex;
+  align-items: center;
   gap: 8px;
   font-size: 0.72rem;
   color: var(--app-muted);
@@ -714,6 +815,37 @@ html, body {
   border-radius: var(--radius-xs);
 }
 
+.room-amenities-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.room-amenity-tag {
+  background: var(--app-bg);
+  border: 1px solid var(--app-border);
+  color: var(--app-muted);
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.room-action-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px dashed var(--app-border);
+  padding-top: 10px;
+}
+
+.room-current-price {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
 /* Sticky Bottom Bar on Detail Screen */
 .mmt-sticky-book-bar {
   position: fixed;
@@ -724,7 +856,7 @@ html, body {
   max-width: 480px;
   background: white;
   border-top: 1px solid var(--app-border);
-  padding: 12px 18px;
+  padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px)) 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -741,13 +873,13 @@ html, body {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 66px;
+  height: calc(64px + env(safe-area-inset-bottom, 0px));
   background: white;
   border-top: 1px solid var(--app-border);
   display: flex;
   justify-content: space-around;
-  align-items: center;
-  padding: 0 4px;
+  align-items: flex-start;
+  padding: 6px 4px env(safe-area-inset-bottom, 6px) 4px;
   z-index: 85;
   box-shadow: var(--shadow-bottom-nav);
 }
@@ -762,7 +894,7 @@ html, body {
   border: none;
   color: #64748B;
   cursor: pointer;
-  padding: 6px;
+  padding: 4px 6px;
   border-radius: var(--radius-sm);
   font-family: var(--font-body);
   flex: 1;
@@ -828,7 +960,7 @@ html, body {
   background: white;
   border-top-left-radius: var(--radius-xl);
   border-top-right-radius: var(--radius-xl);
-  padding: 16px 18px 24px 18px;
+  padding: 16px 18px calc(30px + env(safe-area-inset-bottom, 20px)) 18px;
   max-height: 90%;
   overflow-y: auto;
   transform: translateY(100%);
@@ -874,6 +1006,36 @@ html, body {
   justify-content: center;
   cursor: pointer;
   color: var(--app-muted);
+}
+
+.booking-summary-pill {
+  background: #F8FAFC;
+  border: 1px solid var(--app-border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.booking-summary-img {
+  width: 54px;
+  height: 54px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.booking-hotel-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--app-text);
+}
+
+.booking-room-name {
+  font-size: 0.78rem;
+  color: var(--primary);
+  font-weight: 600;
 }
 
 /* Form Styles */
@@ -932,7 +1094,7 @@ html, body {
   background: var(--primary-hover);
 }
 
-/* MakeMyTrip Price Breakdown Box */
+/* Price Breakdown */
 .mmt-bill-card {
   background: #F8FAFC;
   border: 1px solid var(--app-border);
@@ -963,7 +1125,7 @@ html, body {
   color: var(--primary);
 }
 
-/* MakeMyTrip Ticket Voucher */
+/* E-Ticket Voucher */
 .ticket-card {
   background: white;
   border-radius: var(--radius-lg);
@@ -1014,10 +1176,151 @@ html, body {
   color: #1A2B49;
 }
 
+/* Admin Styles */
+.admin-header-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.admin-tab-btn {
+  flex: 1;
+  text-align: center;
+  padding: 10px 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+}
+
+.admin-tab-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.admin-content-pane {
+  display: block;
+}
+
+.preset-pills-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  margin-bottom: 8px;
+}
+
+.preset-pill {
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--app-bg);
+  border: 1px solid var(--app-border);
+  font-size: 0.7rem;
+  color: var(--app-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.preset-pill:hover, .preset-pill.active {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+.checkbox-amenities-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  max-height: 120px;
+  overflow-y: auto;
+  padding: 8px;
+  background: var(--app-bg);
+  border: 1px solid var(--app-border);
+  border-radius: var(--radius-md);
+}
+
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--app-text);
+  cursor: pointer;
+}
+
+.check-item input {
+  accent-color: var(--primary);
+}
+
+.mgmt-hotel-card {
+  background: white;
+  border: 1px solid var(--app-border);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  margin-bottom: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.mgmt-hotel-thumb {
+  width: 50px;
+  height: 50px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.mgmt-hotel-info {
+  flex: 1;
+}
+
+.mgmt-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--app-text);
+}
+
+.mgmt-sub {
+  font-size: 0.72rem;
+  color: var(--app-muted);
+}
+
+.mgmt-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.mgmt-action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--app-border);
+  background: var(--app-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--app-muted);
+}
+
+.mgmt-action-btn:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.mgmt-action-btn.delete:hover {
+  background: #FEE2E2;
+  color: #EF4444;
+  border-color: #EF4444;
+}
+
 /* Toast Notifications */
 .toast-container {
   position: fixed;
-  bottom: 74px;
+  bottom: calc(76px + env(safe-area-inset-bottom, 12px));
   left: 50%;
   transform: translateX(-50%);
   z-index: 999;
