@@ -1321,11 +1321,6 @@ export default function HotelDetailScreen() {
                           {currentRoomCount} {currentRoomCount === 1 ? 'room' : 'rooms'}
                         </span>
                       </div>
-                      {recommendedCount > 1 && (
-                        <div className="mb-2 rounded-lg bg-amber-50 border border-amber-200/90 px-2 py-1 text-[10px] text-amber-800 font-semibold text-center leading-tight">
-                          {recommendedCount} rooms needed for {adultsCount} guests
-                        </div>
-                      )}
 
                       {/* Custom Minimalist Trigger Button */}
                       <button
