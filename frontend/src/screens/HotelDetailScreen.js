@@ -199,8 +199,7 @@ export default function HotelDetailScreen() {
 
   const standardRooms = useMemo(() => {
     if (!rooms || rooms.length === 0) return [];
-    const nonCombo = rooms.filter((r) => !r.isCombo && !(r.type && r.type.toLowerCase().includes('dorm')) && !(r.name && r.name.toLowerCase().includes('combo')));
-    return nonCombo.length > 0 ? nonCombo : rooms;
+    return rooms.filter((r) => !r.isCombo && !(r.type && r.type.toLowerCase().includes('dorm')) && !(r.name && r.name.toLowerCase().includes('combo')));
   }, [rooms]);
 
   const featuredRoom = useMemo(() => {
@@ -230,7 +229,7 @@ export default function HotelDetailScreen() {
 
     return {
       text: `${capAdults} Adults`,
-      warning: r.isCombo ? '✓ Accommodates all 5 in 1 combo' : '',
+      warning: '',
       capAdults,
       neededRooms: 1,
       fitsAll: true
@@ -1089,10 +1088,18 @@ export default function HotelDetailScreen() {
 
             {/* Dynamic Rooms Rows */}
             {standardRooms.length === 0 ? (
-              <div className="p-12 text-center text-slate-500">
-                <i className="fa-solid fa-bed text-3xl text-slate-300 mb-3" />
-                <h3 className="font-bold text-base text-slate-800">No rooms listed for this property yet</h3>
-                <p className="text-xs text-slate-400 mt-1">Please explore other verified stays or check back soon.</p>
+              <div className="p-10 text-center text-slate-500">
+                <i className="fa-solid fa-people-group text-3xl text-rose-500 mb-2" />
+                <h3 className="font-bold text-sm text-slate-800">
+                  {comboRooms.length > 0 
+                    ? 'All inventory at this property is in Group Dorms & Combos' 
+                    : 'No standard rooms listed for this property yet'}
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  {comboRooms.length > 0 
+                    ? 'Please book your stay using the "Select Room Combo" section above.' 
+                    : 'Please explore other verified stays or check back soon.'}
+                </p>
               </div>
             ) : (
               standardRooms.map((room, idx) => {
