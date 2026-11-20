@@ -68,19 +68,37 @@ export default function VerifyModal() {
 
         {/* Verification Status Banner based on Cryptographic Signature */}
         {isTampered ? (
-          <div className="flex items-center gap-3 mb-4 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900">
-            <div className="w-11 h-11 rounded-2xl bg-rose-600 text-white flex items-center justify-center text-xl shrink-0 shadow-sm">
-              <i className="fa-solid fa-triangle-exclamation"></i>
+          <div className="flex items-center gap-3 mb-4 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 shadow-xs">
+            <div className="w-11 h-11 rounded-2xl bg-rose-600 text-white flex items-center justify-center text-lg shrink-0 shadow-sm">
+              <i className="fa-solid fa-shield-xmark"></i>
             </div>
             <div>
               <div className="text-[10px] font-black tracking-wider uppercase text-rose-700">
-                ANTI-FORGERY ALERT: SIGNATURE MISMATCH
+                DECRYPTION REJECTED: FORGED OR TAMPERED
               </div>
               <h3 className="text-sm font-black text-rose-950 leading-snug">
-                Counterfeit / Tampered QR Pass
+                Cannot Unlock QR with Secret Key
               </h3>
-              <p className="text-[10px] text-rose-700 mt-0.5">
-                The digital signature on this QR code does NOT match the server key. Anyone who created this QR payload did not have authorized access.
+              <p className="text-[10px] text-rose-700 mt-0.5 leading-tight">
+                The QR ciphertext failed cryptographic authentication. It was either forged or altered without the server secret key. Check-in is blocked.
+              </p>
+            </div>
+          </div>
+        ) : data.isSecretDecrypted ? (
+          <div className="flex items-center gap-3 mb-4 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 shadow-xs">
+            <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-lg shrink-0 shadow-sm">
+              <i className="fa-solid fa-key"></i>
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5 text-[10px] font-black tracking-wider uppercase text-emerald-800">
+                <i className="fa-solid fa-lock"></i>
+                UNLOCKED VIA SERVER SECRET KEY
+              </div>
+              <h3 className="text-sm font-black text-emerald-950 leading-snug">
+                AES-256-GCM Authenticated Pass
+              </h3>
+              <p className="text-[10px] text-emerald-700 mt-0.5 leading-tight">
+                {data.securityStamp || 'Encrypted QR payload decrypted and validated against Hotel Factories master key.'}
               </p>
             </div>
           </div>

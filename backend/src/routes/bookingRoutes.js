@@ -4,6 +4,8 @@ const bookingController = require('../controllers/bookingController');
 const { verifyToken, requireHotelierOrAdmin } = require('../middleware/auth');
 
 router.get('/quote', bookingController.getQuote);
+router.post('/unlock-vault', bookingController.unlockVaultPass);
+router.get('/unlock-vault', bookingController.unlockVaultPass);
 router.get('/verify/:code', bookingController.verifyBookingPublic);
 router.post('/hold', verifyToken, bookingController.holdBooking);
 router.post('/check-in', verifyToken, requireHotelierOrAdmin, bookingController.checkInGuest);

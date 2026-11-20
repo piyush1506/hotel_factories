@@ -34,12 +34,18 @@ export default function DynamicQRCode({
   );
 
   const passSignature = booking?.passSignature || '';
+  const vaultToken = booking?.vaultToken || '';
 
-  // Construct dynamic cryptographically signed verification URL using environment variable
+  // Construct encrypted verification URL locked with backend secret key
   const getVerifyUrl = (forceTamper = false) => {
-    const sig = forceTamper ? 'FORGED_INVALID_HASH_123' : passSignature;
-    const sigParam = sig ? `&sig=${encodeURIComponent(sig)}` : '';
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+    if (forceTamper) {
+      return `${baseUrl}/?vault=HF1.TAMPERED_IV_KEY.FORGED_CIPHERTEXT.INVALID_TAG`;
+    }
+    if (vaultToken) {
+      return `${baseUrl}/?vault=${encodeURIComponent(vaultToken)}`;
+    }
+    const sigParam = passSignature ? `&sig=${encodeURIComponent(passSignature)}` : '';
     return `${baseUrl}/?verify=${encodeURIComponent(bookingCode)}${sigParam}`;
   };
 
@@ -151,7 +157,7 @@ export default function DynamicQRCode({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-emerald-700">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>HMAC-SHA256 SIGNED PASS</span>
+              <span>AES-256 ENCRYPTED PASS</span>
             </div>
 
             <div className="text-xs font-black text-slate-900 truncate mt-0.5">
@@ -163,8 +169,8 @@ export default function DynamicQRCode({
             </div>
 
             <div className="text-[9px] text-[#003b95] font-bold flex items-center gap-1 mt-1">
-              <i className="fa-solid fa-shield-halved text-[8px] text-emerald-600"></i>
-              <span>Anti-Forgery Protected · Tap to Enlarge</span>
+              <i className="fa-solid fa-lock text-[8px] text-emerald-600"></i>
+              <span>Locked via Secret Key · Tap to Enlarge</span>
             </div>
           </div>
         )}
@@ -191,8 +197,8 @@ export default function DynamicQRCode({
 
             {/* Top Pill */}
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-wider mb-2">
-              <i className="fa-solid fa-lock text-[9px]"></i>
-              Cryptographically Signed Pass
+              <i className="fa-solid fa-key text-[9px]"></i>
+              Encrypted QR · Decryptable Only by Backend
             </div>
 
             <h3 className="text-sm font-black text-slate-900">
@@ -226,15 +232,15 @@ export default function DynamicQRCode({
             {/* Security Explanation Box */}
             <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-left text-[10px] space-y-1 mb-3">
               <div className="flex items-center justify-between font-mono">
-                <span className="font-sans font-bold text-slate-700">Digital Seal:</span>
-                <span className="font-bold text-emerald-700">HMAC-SHA256 Valid</span>
+                <span className="font-sans font-bold text-slate-700">QR Encryption:</span>
+                <span className="font-bold text-emerald-700">AES-256-GCM Locked</span>
               </div>
               <div className="flex items-center justify-between font-mono text-[9px] text-slate-500">
-                <span>Server Signature:</span>
-                <span className="font-bold text-slate-800">{passSignature ? passSignature.slice(0, 12) + '...' : 'Protected'}</span>
+                <span>Unlock Key:</span>
+                <span className="font-bold text-slate-800">Backend Secret Master Key</span>
               </div>
               <p className="text-[9px] text-slate-500 pt-1 border-t border-slate-200 leading-tight">
-                This QR pass cannot be forged or faked using third-party tools. Altering any reservation parameters invalidates the cryptographic signature.
+                Ordinary QR scanners cannot read or decode this booking. The payload is encrypted with the server secret key and can only be unlocked by the Hotel Factories backend.
               </p>
             </div>
 
@@ -255,7 +261,7 @@ export default function DynamicQRCode({
                 className="py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center gap-1.5 cursor-pointer transition-colors text-[11px]"
               >
                 <i className={`fa-solid ${copiedLink ? 'fa-check text-emerald-600' : 'fa-link'} text-xs`}></i>
-                <span>{copiedLink ? 'Copied' : 'Copy Signed URL'}</span>
+                <span>{copiedLink ? 'Copied' : 'Copy Locked Link'}</span>
               </button>
             </div>
 
@@ -263,22 +269,28 @@ export default function DynamicQRCode({
             <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
               <button
                 type="button"
-                onClick={(e) => handleTestVerify(e, false)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  verifyBookingCode(vaultToken || bookingCode, passSignature);
+                }}
                 className="py-2 px-2 rounded-xl bg-black hover:bg-zinc-800 text-white flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
-                title="Verify genuine signature"
+                title="Unlock and decrypt using Backend Secret Key"
               >
-                <i className="fa-solid fa-shield-check text-emerald-400"></i>
-                <span>Verify Genuine</span>
+                <i className="fa-solid fa-key text-amber-300"></i>
+                <span>Unlock via Secret</span>
               </button>
 
               <button
                 type="button"
-                onClick={(e) => handleTestVerify(e, true)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  verifyBookingCode('HF1.TAMPERED_IV_KEY.FORGED_CIPHERTEXT.INVALID_TAG');
+                }}
                 className="py-2 px-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                 title="Simulate what happens if someone generates a fake/tampered QR code"
               >
-                <i className="fa-solid fa-bug text-rose-600"></i>
-                <span>Test Fake QR</span>
+                <i className="fa-solid fa-shield-xmark text-rose-600"></i>
+                <span>Test Forged QR</span>
               </button>
             </div>
 

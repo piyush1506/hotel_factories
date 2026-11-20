@@ -156,13 +156,37 @@ class BookingController {
 
   async verifyBookingPublic(req, res, next) {
     try {
-      const { code } = req.params;
+      const codeOrVault = req.query.vault || req.body?.vaultToken || req.params.code;
       const signature = req.query.sig || req.query.s || '';
-      const verified = bookingService.verifyBookingPass(code, signature);
+      const verified = bookingService.verifyBookingPass(codeOrVault, signature);
       if (!verified) {
         return res.status(404).json({ success: false, message: 'Booking verification record not found or code invalid.' });
       }
       res.status(200).json({ success: true, verified });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async unlockVaultPass(req, res, next) {
+    try {
+      const vaultToken = req.body?.vaultToken || req.query?.vault || req.body?.token;
+      if (!vaultToken) {
+        return res.status(400).json({ success: false, message: 'vaultToken is required to unlock pass.' });
+      }
+      const verified = bookingService.verifyBookingPass(vaultToken);
+      if (!verified || !verified.isValid) {
+        return res.status(400).json({
+          success: false,
+          message: verified?.error || 'Invalid or counterfeit encrypted QR pass. Secret key decryption failed.',
+          verified
+        });
+      }
+      res.status(200).json({
+        success: true,
+        message: 'QR pass successfully decrypted and authenticated via backend secret key.',
+        verified
+      });
     } catch (err) {
       next(err);
     }

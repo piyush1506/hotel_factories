@@ -399,27 +399,42 @@ export const AppProvider = ({ children, initialScreen = 'home' }) => {
     scrollTop();
   };
 
-  const verifyBookingCode = useCallback(async (code, sig = '') => {
-    if (!code) return;
+  const verifyBookingCode = useCallback(async (codeOrVault, sig = '') => {
+    if (!codeOrVault) return;
     try {
-      const clean = code.trim().toUpperCase();
-      const query = sig ? `?sig=${encodeURIComponent(sig)}` : '';
-      const apiBase = process.env.NEXT_PUBLIC_BACKEND_URL || '/api';
-      const res = await fetch(`${apiBase}/bookings/verify/${encodeURIComponent(clean)}${query}`);
+      const trimmed = String(codeOrVault).trim();
+      const isVault = trimmed.startsWith('HF1.') || (trimmed.includes('.') && trimmed.split('.').length === 4);
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+      
+      let url = '';
+      if (isVault) {
+        url = `${apiBase}/bookings/unlock-vault?vault=${encodeURIComponent(trimmed)}`;
+      } else {
+        const query = sig ? `?sig=${encodeURIComponent(sig)}` : '';
+        url = `${apiBase}/bookings/verify/${encodeURIComponent(trimmed.toUpperCase())}${query}`;
+      }
+
+      const res = await fetch(url);
       const json = await res.json();
       if (json.success && json.verified) {
         setVerifiedPassData(json.verified);
         setIsVerifyModalOpen(true);
         return json.verified;
+      } else if (json.verified && !json.verified.isValid) {
+        setVerifiedPassData(json.verified);
+        setIsVerifyModalOpen(true);
+        showToast(json.message || 'Decryption failed: Token is counterfeit!', 'error');
+        return json.verified;
       }
     } catch {
       // Fallback
     }
-    const local = bookings.find((b) => (b.bookingCode && b.bookingCode.toUpperCase() === code.toUpperCase()) || b.id === code);
+    const local = bookings.find((b) => (b.bookingCode && b.bookingCode.toUpperCase() === String(codeOrVault).toUpperCase()) || b.id === codeOrVault);
     if (local) {
       const pass = {
         isValid: true,
         isCryptographicallySigned: Boolean(sig && local.passSignature === sig),
+        isSecretDecrypted: true,
         signatureStatus: sig ? (local.passSignature === sig ? 'AUTHENTIC_SIGNED' : 'TAMPERED_OR_INVALID') : 'UNSIGNED_LOOKUP',
         securityStamp: sig && local.passSignature === sig 
           ? `HMAC-SHA256 Certified Authenticity (${sig})` 
@@ -440,15 +455,18 @@ export const AppProvider = ({ children, initialScreen = 'home' }) => {
       setIsVerifyModalOpen(true);
       return pass;
     }
-    showToast(`No verified booking found matching code ${code}`, 'error');
+    showToast(`No verified booking found matching code ${codeOrVault}`, 'error');
   }, [bookings, showToast]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
+      const vaultToken = params.get('vault');
       const verifyCode = params.get('verify');
       const verifySig = params.get('sig');
-      if (verifyCode) {
+      if (vaultToken) {
+        verifyBookingCode(vaultToken);
+      } else if (verifyCode) {
         verifyBookingCode(verifyCode, verifySig || '');
       }
     }

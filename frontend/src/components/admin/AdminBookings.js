@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useApp } from '../../context/AppContext';
 import { getStatusMeta } from '../../utils/helpers';
 import {
   Badge,
@@ -42,6 +43,7 @@ const STATUS_TABS = [
 ];
 
 export default function AdminBookings({ bookings = [], hotels = [], onCheckIn, onCheckOut, onMarkNoShow, onCancel, focusRequest }) {
+  const { verifyBookingCode } = useApp();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [hotelFilter, setHotelFilter] = useState('all');
@@ -51,6 +53,9 @@ export default function AdminBookings({ bookings = [], hotels = [], onCheckIn, o
   const [cancelTarget, setCancelTarget] = useState(null);
   const [cancelReason, setCancelReason] = useState('Cancelled by platform administrator');
   const [cancelBusy, setCancelBusy] = useState(false);
+  const [isUnlockModalOpen, setIsUnlockModalOpen] = useState(false);
+  const [passInput, setPassInput] = useState('');
+  const [unlockBusy, setUnlockBusy] = useState(false);
   const handledFocus = useRef(null);
 
   const selected = bookings.find((booking) => booking.id === selectedId) || null;
@@ -176,9 +181,12 @@ export default function AdminBookings({ bookings = [], hotels = [], onCheckIn, o
         title="Bookings"
         description="Monitor every reservation, verify payment and payout state, check guests in, and handle cancellations from one ledger."
         actions={
-          <>
+          <div className="flex items-center gap-2">
+            <PrimaryButton icon="fa-key" onClick={() => setIsUnlockModalOpen(true)}>
+              Unlock & Verify QR Pass
+            </PrimaryButton>
             <GhostButton icon="fa-file-arrow-down" onClick={exportBookings}>Export CSV</GhostButton>
-          </>
+          </div>
         }
         meta={<Badge tone="sky" dot>{filtered.length} shown</Badge>}
       />
@@ -466,6 +474,63 @@ export default function AdminBookings({ bookings = [], hotels = [], onCheckIn, o
           <Field label="Cancellation reason" htmlFor="cancel-reason">
             <TextArea id="cancel-reason" value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} rows={3} />
           </Field>
+        </div>
+      </Modal>
+
+      <Modal
+        open={isUnlockModalOpen}
+        onClose={() => setIsUnlockModalOpen(false)}
+        title="Admin Key Decryptor — Secure QR Pass"
+        footer={
+          <div className="flex justify-end gap-2">
+            <GhostButton onClick={() => setIsUnlockModalOpen(false)}>Cancel</GhostButton>
+            <PrimaryButton
+              icon="fa-unlock-keyhole"
+              busy={unlockBusy}
+              onClick={async () => {
+                if (!passInput.trim()) return;
+                setUnlockBusy(true);
+                try {
+                  await verifyBookingCode(passInput.trim());
+                  setIsUnlockModalOpen(false);
+                  setPassInput('');
+                } finally {
+                  setUnlockBusy(false);
+                }
+              }}
+            >
+              Decrypt Pass via Secret Key
+            </PrimaryButton>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="rounded-lg border border-sky-200 bg-sky-50 px-3.5 py-3 text-xs leading-relaxed text-sky-800">
+            <i className="fa-solid fa-shield-halved mr-1.5 text-sky-600"></i>
+            Paste the raw encrypted pass token (<code className="font-mono font-bold">HF1.iv.cipher.authTag</code>), a reservation code (<code className="font-mono font-bold">HF-XXXXXX</code>), or scan the guest&apos;s QR code. The server will use the secret AES-256 vault key to decrypt, authenticate, and display verified guest details.
+          </div>
+          <Field label="Encrypted Vault Token or Reservation Code" htmlFor="qr-pass-input">
+            <TextArea
+              id="qr-pass-input"
+              value={passInput}
+              onChange={(e) => setPassInput(e.target.value)}
+              placeholder="e.g. HF1.s3cr3t... or HF-102938 or paste scanned QR content"
+              rows={3}
+              className="font-mono text-xs"
+            />
+          </Field>
+          {bookings.length > 0 && bookings[0].vaultToken && (
+            <div className="rounded-md bg-slate-50 p-2.5 text-xs text-slate-600 border border-slate-200">
+              <span className="font-medium text-slate-700">Quick test with latest booking ({bookings[0].bookingCode}):</span>
+              <button
+                type="button"
+                className="mt-1 block text-left text-sky-600 hover:text-sky-700 font-mono text-[11px] truncate w-full underline"
+                onClick={() => setPassInput(bookings[0].vaultToken)}
+              >
+                Load encrypted token for {bookings[0].guestName} ({bookings[0].bookingCode})
+              </button>
+            </div>
+          )}
         </div>
       </Modal>
     </div>
