@@ -1,16 +1,31 @@
-# hotel-factories
+# Hotel Factories
 
-A modern, MakeMyTrip-inspired luxury hotel booking and inventory management mobile web application built with React, Vite, and modern CSS.
+Hotel Factories is organized as two independent applications:
 
-## Features
-- 🏨 **Curated Hotel Stays**: Verified luxury hotels, beachfront resorts, mountain retreats, and city center properties.
-- 🏷️ **MakeMyTrip Style Badges & Pricing**: MMT Assured tags, real-time discount calculations, taxes & fees breakdown.
-- 🎫 **Instant Reservation & Digital E-Ticket**: Interactive booking flow with coupon engine (`MMT20`, `LUXURY25`), payment simulation, and QR code vouchers.
-- ⚙️ **Partner Extranet / Manager**: Full CRUD for listing properties and custom room configurations with local storage persistence.
-- 💵 **Multi-Currency Support**: Instant switching between INR (₹) and USD ($).
+- `frontend/` — Next.js customer, hotelier, and admin interface
+- `backend/` — Express API, booking, inventory, payment, and payout services
 
-## Getting Started
-```bash
+## Frontend
+
+```powershell
+cd frontend
 npm install
 npm run dev
 ```
+
+The frontend runs at `http://localhost:3000` and uses
+`NEXT_PUBLIC_API_URL` when configured. Its local default API is
+`http://localhost:5050/api/v1`.
+
+## Backend
+
+```powershell
+cd backend
+Copy-Item .env.example .env
+npm install
+npm run dev
+```
+
+The backend runs at `http://localhost:5050` by default. Configure a non-empty
+`JWT_SECRET` and the other required values in `backend/.env` before starting it.
+

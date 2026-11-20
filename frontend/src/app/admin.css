@@ -1,0 +1,142 @@
+/* =========================================================
+   Hotel Factories — Admin Control Center
+   ========================================================= */
+
+.admin-fade-up {
+  animation: adminFadeUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes adminFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.admin-drawer-panel {
+  animation: adminDrawerIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes adminDrawerIn {
+  from {
+    opacity: 0.4;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.admin-modal-panel {
+  animation: adminModalIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes adminModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.admin-command-panel {
+  animation: adminCommandIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes adminCommandIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.admin-sidebar-scroll,
+.admin-scrollbar,
+.admin-table-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+}
+
+.admin-sidebar-scroll::-webkit-scrollbar,
+.admin-scrollbar::-webkit-scrollbar,
+.admin-table-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.admin-sidebar-scroll::-webkit-scrollbar-track,
+.admin-scrollbar::-webkit-scrollbar-track,
+.admin-table-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-sidebar-scroll::-webkit-scrollbar-thumb,
+.admin-scrollbar::-webkit-scrollbar-thumb,
+.admin-table-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.38);
+}
+
+.admin-sidebar-scroll::-webkit-scrollbar-thumb:hover,
+.admin-scrollbar::-webkit-scrollbar-thumb:hover,
+.admin-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.55);
+}
+
+.admin-table-scroll {
+  scrollbar-color: rgba(148, 163, 184, 0.5) rgba(241, 245, 249, 0.6);
+}
+
+.admin-table-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+/* Ensure table cells with nowrap never break hyphens or dates */
+.admin-table-scroll .whitespace-nowrap {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  hyphens: none !important;
+}
+
+.admin-table-scroll font-mono {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+}
+
+/* Keep admin surfaces crisp when the console is embedded in the app shell */
+.admin-fade-up section,
+.admin-fade-up article {
+  min-width: 0;
+}
+
+/* Give native date inputs a consistent calendar affordance */
+.admin-fade-up input[type='date']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.55;
+}
+
+.admin-fade-up input[type='date']::-webkit-calendar-picker-indicator:hover {
+  opacity: 0.9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-fade-up,
+  .admin-drawer-panel,
+  .admin-modal-panel,
+  .admin-command-panel {
+    animation: none;
+  }
+}

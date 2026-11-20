@@ -1,0 +1,35 @@
+{
+  "name": "hotel-factories-backend",
+  "version": "1.0.0",
+  "description": "Production-grade Express.js backend for Hotel Factories multi-vendor booking engine",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js",
+    "test": "node --test"
+  },
+  "keywords": [
+    "hotel-booking",
+    "express",
+    "razorpay",
+    "multi-vendor",
+    "flutter",
+    "nextjs"
+  ],
+  "author": "Hotel Factories Engineering Team",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "compression": "^1.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.3.1",
+    "express": "^4.21.2",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.10.1",
+    "pg": "^8.23.1",
+    "qrcode": "^1.5.4",
+    "razorpay": "^2.9.8",
+    "uuid": "^11.1.0"
+  }
+}
