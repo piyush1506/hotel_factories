@@ -58,7 +58,7 @@ export default function SearchScreen() {
 
   // Stable clean categories matching the platform theme
   const availableCategories = useMemo(() => {
-    return ['All', 'Hotels', 'Resorts'];
+    return ['All', 'Hotels', 'Resorts', 'Dorms & Combos'];
   }, []);
 
   // Collapsible Accordions in Sidebar
@@ -272,7 +272,9 @@ export default function SearchScreen() {
       if (selectedCategory !== 'All') {
         const sel = selectedCategory.toLowerCase().trim();
         const hCat = (h.category || '').toLowerCase().trim();
+        const isComboMatch = sel.includes('combo') || sel.includes('dorm');
         const matches =
+          (isComboMatch && (hCat.includes('combo') || hCat.includes('dorm') || (Array.isArray(h.rooms) && h.rooms.some(r => r.isCombo || (r.type && r.type.toLowerCase().includes('dorm')))))) ||
           hCat === sel ||
           hCat.replace(/s$/, '') === sel.replace(/s$/, '') ||
           (sel === 'hotels' && (hCat === 'hotels' || hCat === 'hotel' || hCat === 'all'));

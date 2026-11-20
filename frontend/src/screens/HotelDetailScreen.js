@@ -191,6 +191,18 @@ export default function HotelDetailScreen() {
     return [];
   }, [hotel]);
 
+  // Separated Combos and Standard Rooms
+  const comboRooms = useMemo(() => {
+    if (!rooms || rooms.length === 0) return [];
+    return rooms.filter((r) => r.isCombo || (r.type && r.type.toLowerCase().includes('dorm')) || (r.name && r.name.toLowerCase().includes('combo')));
+  }, [rooms]);
+
+  const standardRooms = useMemo(() => {
+    if (!rooms || rooms.length === 0) return [];
+    const nonCombo = rooms.filter((r) => !r.isCombo && !(r.type && r.type.toLowerCase().includes('dorm')) && !(r.name && r.name.toLowerCase().includes('combo')));
+    return nonCombo.length > 0 ? nonCombo : rooms;
+  }, [rooms]);
+
   const featuredRoom = useMemo(() => {
     if (rooms && rooms.length > 0) return rooms[0];
     return null;
@@ -912,6 +924,139 @@ export default function HotelDetailScreen() {
           </button>
         </div>
 
+        {/* MakeMyTrip Style "Select Room Combo" Card */}
+        {comboRooms.length > 0 && (
+          <div className="mb-8" id="roomCombosSection">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                  Select Room Combo
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Ideal for families, large groups, students & budget backpackers (up to 5 beds)
+                </p>
+              </div>
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200">
+                <i className="fa-solid fa-tag text-[10px]" />
+                <span>Save up to 40% with Combo</span>
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {comboRooms.map((combo) => {
+                const comboBasePrice = Number(combo.basePrice || 1664);
+                const comboOriginalPrice = Number(combo.originalPrice || Math.round(comboBasePrice * 1.6));
+                const comboTotalStay = comboBasePrice * nights;
+                const comboTotalOriginal = comboOriginalPrice * nights;
+                const comboTaxes = Number(combo.taxAmount || Math.round(comboBasePrice * 0.05 * nights));
+                const comboImage = combo.images?.[0] || combo.image || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80';
+                const imageCount = (Array.isArray(combo.images) && combo.images.length > 0) ? combo.images.length : 7;
+
+                return (
+                  <div
+                    key={combo.id}
+                    className="rounded-2xl border-2 border-[#d93025] bg-white p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative"
+                  >
+                    {/* Header: 5 Beds Combo | Bed Only / Breakfast Included */}
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full bg-[#d93025] animate-pulse" />
+                        <h4 className="font-extrabold text-sm sm:text-base text-slate-900">
+                          {combo.comboBedCount || 5} Beds Combo | {combo.mealPlan || 'Bed Only'}
+                        </h4>
+                      </div>
+                      <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                        Accommodates {combo.capacityAdults || 5} Adults
+                      </span>
+                    </div>
+
+                    {/* Main Content Card matching Reference Image */}
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5 bg-neutral-50/70 p-4 rounded-xl border border-neutral-100">
+                      {/* Left: Thumbnail & Details */}
+                      <div className="flex items-start gap-4 flex-1">
+                        {/* Dorm Image with count badge */}
+                        <div className="relative h-20 w-28 sm:h-24 sm:w-36 shrink-0 rounded-xl overflow-hidden bg-slate-200 shadow-2xs">
+                          <img
+                            src={comboImage}
+                            alt={combo.name}
+                            className="h-full w-full object-cover"
+                          />
+                          <span className="absolute bottom-1.5 right-1.5 bg-black/75 text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 shadow-sm">
+                            <i className="fa-solid fa-camera text-[9px]" />
+                            <span>{imageCount}</span>
+                          </span>
+                        </div>
+
+                        {/* Title & Amenities Badges */}
+                        <div className="min-w-0 flex-1">
+                          <h5 className="font-bold text-sm sm:text-base text-slate-900">
+                            Bed in {combo.dormType || '10 Bed Mixed Dormitory'}
+                          </h5>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            {combo.sizeSqFt || 430} sq.ft · {combo.bedType || 'Bunk Bed'}
+                          </p>
+
+                          {/* Amenity Pills matching Screenshot */}
+                          <div className="flex flex-wrap gap-1.5 mt-2.5">
+                            {(combo.amenities || ['Charging Points', 'Blanket', 'Blackout curtains', 'Sofa']).map((tag) => (
+                              <span
+                                key={tag}
+                                className="text-[11px] bg-white border border-slate-200 text-slate-700 px-2.5 py-0.5 rounded-full shadow-2xs font-medium"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: Combo Total Price & Book Combo CTA */}
+                      <div className="w-full md:w-auto flex flex-row md:flex-col items-center md:items-end justify-between border-t md:border-t-0 border-slate-200/80 pt-3 md:pt-0 shrink-0">
+                        <div className="text-left md:text-right">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
+                            COMBO TOTAL
+                          </span>
+                          <div className="flex items-baseline gap-2">
+                            <span className="font-heading text-2xl sm:text-3xl font-black text-slate-900">
+                              {formatPrice(comboTotalStay)}
+                            </span>
+                            {comboTotalOriginal > comboTotalStay && (
+                              <span className="text-xs text-slate-400 line-through">
+                                {formatPrice(comboTotalOriginal)}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-slate-500 block">
+                            + {formatPrice(comboTaxes)} taxes ({nights} {nights === 1 ? 'night' : 'nights'})
+                          </span>
+                          {combo.mealPlan && (
+                            <span className="text-[11px] font-bold text-emerald-600 flex items-center md:justify-end gap-1 mt-0.5">
+                              <i className="fa-solid fa-check text-[10px]" />
+                              <span>{combo.mealPlan}</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleReserveRoom({
+                            ...combo,
+                            roomsCount: 1,
+                            guestCount: { adults: combo.capacityAdults || 5, children: 0 }
+                          }, comboImage)}
+                          className="px-8 py-3 rounded-full bg-[#d93025] hover:bg-[#b8261c] active:scale-95 text-white font-extrabold text-sm shadow-md transition-all cursor-pointer whitespace-nowrap"
+                        >
+                          Book Combo
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* 8. Available Accommodation Options Table */}
         <section className="mb-10" ref={roomsListRef} id="roomsListSection">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
@@ -920,7 +1065,7 @@ export default function HotelDetailScreen() {
                 Available Accommodation Options
               </h2>
               <p className="text-xs text-slate-500">
-                All room choices include complimentary high-speed WiFi &amp; direct property voucher confirmation.
+                All room choices include complimentary high-speed WiFi & direct property voucher confirmation.
               </p>
             </div>
             <span className="text-xs font-bold text-sky-600 flex items-center gap-1">
@@ -934,20 +1079,20 @@ export default function HotelDetailScreen() {
             <div className="hidden lg:grid grid-cols-12 bg-slate-50/90 border-b border-slate-200/90 text-slate-600 text-[11px] font-extrabold uppercase tracking-wider py-3.5 px-6 gap-4">
               <div className="col-span-3">Room Photos</div>
               <div className="col-span-1 text-center">Sleeps</div>
-              <div className="col-span-4">Room Type &amp; Details</div>
+              <div className="col-span-4">Room Type & Details</div>
               <div className="col-span-2 text-right">Price ({nights} {nights === 1 ? 'Night' : 'Nights'})</div>
               <div className="col-span-2 text-center">Select Room</div>
             </div>
 
             {/* Dynamic Rooms Rows */}
-            {rooms.length === 0 ? (
+            {standardRooms.length === 0 ? (
               <div className="p-12 text-center text-slate-500">
                 <i className="fa-solid fa-bed text-3xl text-slate-300 mb-3" />
                 <h3 className="font-bold text-base text-slate-800">No rooms listed for this property yet</h3>
                 <p className="text-xs text-slate-400 mt-1">Please explore other verified stays or check back soon.</p>
               </div>
             ) : (
-              rooms.map((room, idx) => {
+              standardRooms.map((room, idx) => {
                 const basePrice = Number(room.basePrice || room.price || hotel.startingPrice || 0);
                 const originalPrice = Number(room.originalPrice || Math.round(basePrice * 1.25));
                 const multiNightPrice = basePrice * nights;

@@ -71,37 +71,38 @@ export default function HomeScreen() {
     const iconMap = {
       Hotels: 'fa-hotel',
       Resorts: 'fa-umbrella-beach',
+      'Dorms & Combos': 'fa-people-group',
+      '5-Bed Combos & Dorms': 'fa-people-group'
     };
 
-    // 1. Direct from categories API (Hotels & Resorts)
+    // 1. Direct from categories API (Hotels, Resorts, Dorms & Combos)
     if (Array.isArray(categories) && categories.length > 0) {
-      const filtered = categories.filter(c => c.name === 'Hotels' || c.name === 'Resorts');
-      if (filtered.length > 0) {
-        return filtered.map((cat) => ({
-          id: cat.id || cat.slug || cat.label,
-          label: cat.label || cat.name || cat.category,
-          categoryFilter: cat.categoryFilter || cat.name || cat.label,
-          searchFilter: cat.searchQuery || cat.name || cat.label,
-          icon: cat.icon || iconMap[cat.name] || 'fa-hotel',
-          count: cat.staysText || `${cat.count || 0} stays`,
-          liveCount: cat.count || 0,
-        }));
-      }
+      return categories.map((cat) => ({
+        id: cat.id || cat.slug || cat.label,
+        label: cat.label || cat.name || cat.category,
+        categoryFilter: cat.categoryFilter || cat.name || cat.label,
+        searchFilter: cat.searchQuery || cat.name || cat.label,
+        icon: cat.icon || iconMap[cat.name] || 'fa-hotel',
+        count: cat.staysText || `${cat.count || 0} stays`,
+        liveCount: cat.count || 0,
+      }));
     }
 
     // 2. Controlled aggregation from live hotels inventory
     const list = Array.isArray(hotels) ? hotels : [];
-    const counts = { Hotels: 0, Resorts: 0 };
+    const counts = { Hotels: 0, Resorts: 0, 'Dorms & Combos': 0 };
     list.forEach((h) => {
-      const cat = (h.category === 'Resorts') ? 'Resorts' : 'Hotels';
+      let cat = 'Hotels';
+      if (h.category === 'Resorts') cat = 'Resorts';
+      else if (h.category === 'Dorms & Combos' || (h.category && h.category.toLowerCase().includes('combo'))) cat = 'Dorms & Combos';
       counts[cat] = (counts[cat] || 0) + 1;
     });
 
-    const categoryOrder = ['Hotels', 'Resorts'];
+    const categoryOrder = ['Hotels', 'Resorts', 'Dorms & Combos'];
     return categoryOrder.map((catName) => {
       const count = counts[catName] || 0;
       return {
-        id: catName.toLowerCase(),
+        id: catName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
         label: catName,
         categoryFilter: catName,
         searchFilter: catName,

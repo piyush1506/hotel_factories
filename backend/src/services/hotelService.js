@@ -313,7 +313,7 @@ class HotelService {
     const hotels = db.find('hotels', (h) => h.status === 'ACTIVE' && h.isVerified === true);
     let categories = db.find('categories');
 
-    // Default category models for Hotels and Resorts
+    // Default category models for Hotels, Resorts, and 5-Bed Combos
     if (!categories || categories.length === 0) {
       categories = [
         {
@@ -329,8 +329,23 @@ class HotelService {
           slug: 'resorts',
           icon: 'fa-umbrella-beach',
           description: 'Leisure resorts & getaways with lawn and dining'
+        },
+        {
+          id: 'combos',
+          name: 'Dorms & Combos',
+          slug: 'dorms-combos',
+          icon: 'fa-people-group',
+          description: '5-Bed combos, mixed dorms, and budget group stays'
         }
       ];
+    } else if (!categories.some((c) => (c.name || '').toLowerCase().includes('combo') || (c.id || '').includes('combo'))) {
+      categories.push({
+        id: 'combos',
+        name: 'Dorms & Combos',
+        slug: 'dorms-combos',
+        icon: 'fa-people-group',
+        description: '5-Bed combos, mixed dorms, and budget group stays'
+      });
     }
 
     // Link and compute stats for each category dynamically from verified hotels
@@ -340,6 +355,11 @@ class HotelService {
 
       const matchingHotels = hotels.filter((h) => {
         const hCat = (h.category || '').toLowerCase().trim();
+        if (catName.includes('combo') || catSlug.includes('combo') || catName.includes('dorm')) {
+          const hotelRooms = db.find('rooms', (r) => r.hotelId === h.id);
+          const hasComboRoom = hotelRooms.some((r) => r.isCombo || (r.type && r.type.toLowerCase().includes('dorm')));
+          return hCat.includes('combo') || hCat.includes('dorm') || hasComboRoom;
+        }
         return hCat === catName || hCat === catSlug || (catName === 'hotels' && (hCat === 'hotels' || hCat === 'all'));
       });
 
