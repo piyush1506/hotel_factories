@@ -214,24 +214,27 @@ export default function HotelDetailScreen() {
 
   // Format room sleeps dynamically based on room capacity and user's search
   const formatRoomSleeps = (r) => {
-    // If the user specified an explicit adult count in search
-    if (searchParams?.adults) {
-      const searchedAdults = Number(searchParams.adults);
-      const searchedChildren = Number(searchParams.childrenCount || 0);
-      const adultText = `${searchedAdults} ${searchedAdults === 1 ? 'Adult' : 'Adults'}`;
-      const childText = searchedChildren > 0 ? ` + ${searchedChildren} ${searchedChildren === 1 ? 'Child' : 'Children'}` : '';
-      return `${adultText}${childText}`;
+    const capAdults = Number(r.capacityAdults) || (r.isCombo ? 5 : 2);
+    const searchedAdults = Number(searchParams?.adults || 2);
+
+    if (searchedAdults > capAdults) {
+      const neededRooms = Math.ceil(searchedAdults / capAdults);
+      return {
+        text: `Max ${capAdults} Adults`,
+        warning: `Requires ${neededRooms} rooms for ${searchedAdults} guests`,
+        capAdults,
+        neededRooms,
+        fitsAll: false
+      };
     }
 
-    if (r.capacityAdults) {
-      const capAdults = r.capacityAdults;
-      const adultText = `${capAdults} ${capAdults === 1 ? 'Adult' : 'Adults'}`;
-      const childText = r.capacityChildren ? ` + ${r.capacityChildren} ${r.capacityChildren === 1 ? 'Child' : 'Children'}` : '';
-      return `${adultText}${childText}`;
-    }
-
-    if (r.sleeps) return r.sleeps;
-    return '';
+    return {
+      text: `${capAdults} Adults`,
+      warning: r.isCombo ? '✓ Accommodates all 5 in 1 combo' : '',
+      capAdults,
+      neededRooms: 1,
+      fitsAll: true
+    };
   };
 
   // More hotels & rooms suggestion of the same city
@@ -1097,7 +1100,8 @@ export default function HotelDetailScreen() {
                 const originalPrice = Number(room.originalPrice || Math.round(basePrice * 1.25));
                 const multiNightPrice = basePrice * nights;
                 const multiNightOriginal = originalPrice * nights;
-                const currentRoomCount = roomCounts[room.id] || 1;
+                const recommendedCount = adultsCount > (room.capacityAdults || 2) ? Math.ceil(adultsCount / (room.capacityAdults || 2)) : 1;
+                const currentRoomCount = roomCounts[room.id] || recommendedCount;
                 const totalPriceForRoom = multiNightPrice * currentRoomCount;
 
                 // Build full array of room images with fallback to hotel gallery
@@ -1200,10 +1204,24 @@ export default function HotelDetailScreen() {
                     <span className="lg:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">
                       SLEEPS
                     </span>
-                    <div className="inline-flex items-center gap-1.5 text-zinc-800 text-xs font-semibold">
-                      <i className="fa-solid fa-user-group text-xs text-zinc-400" />
-                      <span>{formatRoomSleeps(room)}</span>
-                    </div>
+                    {(() => {
+                      const sleepInfo = formatRoomSleeps(room);
+                      return (
+                        <div className="flex flex-col items-start lg:items-center gap-1">
+                          <div className="inline-flex items-center gap-1.5 text-zinc-800 text-xs font-semibold">
+                            <i className="fa-solid fa-user-group text-xs text-zinc-400" />
+                            <span>{sleepInfo.text}</span>
+                          </div>
+                          {sleepInfo.warning && (
+                            <span className={`text-[10px] leading-tight font-medium ${
+                              sleepInfo.fitsAll ? 'text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200' : 'text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200'
+                            }`}>
+                              {sleepInfo.warning}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Col 3: Room Type, Details & Benefits (4 cols) */}

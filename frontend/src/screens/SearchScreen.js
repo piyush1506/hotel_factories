@@ -1405,6 +1405,23 @@ export default function SearchScreen() {
                             </p>
                           </div>
 
+                          {/* 5+ Adults Capacity Pill & Smart Combo Notification */}
+                          {Number(adults) >= 4 && (
+                            <div className="mb-2">
+                              {Array.isArray(hotel.rooms) && hotel.rooms.some(r => r.isCombo || (r.capacityAdults && r.capacityAdults >= Number(adults))) ? (
+                                <span className="inline-flex items-center gap-1.5 bg-rose-50 text-[#d93025] border border-rose-200 text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-2xs">
+                                  <i className="fa-solid fa-people-group text-[10px]" />
+                                  <span>5-Beds Combo Available (Fits {adults} Adults in 1 Booking)</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-semibold px-2.5 py-0.5 rounded-lg">
+                                  <i className="fa-solid fa-door-open text-[10px] text-amber-600" />
+                                  <span>{Math.ceil(Number(adults) / 2)} standard rooms needed for {adults} adults</span>
+                                </span>
+                              )}
+                            </div>
+                          )}
+
                           {/* Tag Pills: Early check-in, Breakfast Available, Couple Friendly */}
                           <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-slate-100">
                             <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-semibold px-2 py-0.5 rounded">
