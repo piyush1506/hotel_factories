@@ -530,10 +530,6 @@ export default function CheckoutScreen() {
                   <i className="fa-solid fa-shield-halved text-[#00224f]" />
                   <span>Payment Method</span>
                 </h2>
-                <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/80 flex items-center gap-1.5">
-                  <i className="fa-solid fa-lock text-emerald-600 text-xs" />
-                  256-bit SSL Encrypted
-                </span>
               </div>
               <p className="text-xs text-slate-500 mb-5">
                 Pay online instantly through Razorpay or choose to pay at the hotel desk upon check-in.
@@ -602,18 +598,8 @@ export default function CheckoutScreen() {
                 </button>
               </div>
 
-              {/* Informational banner */}
-              {paymentTab === 'razorpay' ? (
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 mb-6 flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 text-sm">
-                    <i className="fa-solid fa-bolt" />
-                  </div>
-                  <div className="text-xs leading-relaxed text-slate-600">
-                    <p className="font-bold text-slate-900 mb-0.5">Instant Confirmation via Razorpay</p>
-                    <p>Clicking <strong>Complete Booking</strong> will open the official Razorpay Checkout popup where you can scan a UPI QR code, choose GPay/PhonePe, or enter your card with instant bank 3D-secure OTP.</p>
-                  </div>
-                </div>
-              ) : (
+              {/* Informational banner for Pay at Hotel */}
+              {paymentTab === 'hotel' && (
                 <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-200/80 mb-6 flex items-start gap-3">
                   <div className="w-8 h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0 text-sm">
                     <i className="fa-solid fa-info" />
