@@ -1110,6 +1110,7 @@ export default function HotelDetailScreen() {
                 const recommendedCount = adultsCount > (room.capacityAdults || 2) ? Math.ceil(adultsCount / (room.capacityAdults || 2)) : 1;
                 const currentRoomCount = roomCounts[room.id] || recommendedCount;
                 const totalPriceForRoom = multiNightPrice * currentRoomCount;
+                const sleepInfo = formatRoomSleeps(room);
 
                 // Build full array of room images with fallback to hotel gallery
                 const rId = room.id || `room-${idx}`;
@@ -1206,29 +1207,16 @@ export default function HotelDetailScreen() {
                     </div>
                   </div>
 
-                  {/* Col 2: Sleeps (1 col) */}
+                  {/* Col 2: Sleeps (1 col) - Clean compact badge */}
                   <div className="lg:col-span-1 text-left lg:text-center pt-1 sm:pt-2">
                     <span className="lg:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">
                       SLEEPS
                     </span>
-                    {(() => {
-                      const sleepInfo = formatRoomSleeps(room);
-                      return (
-                        <div className="flex flex-col items-start lg:items-center gap-1">
-                          <div className="inline-flex items-center gap-1.5 text-zinc-800 text-xs font-semibold">
-                            <i className="fa-solid fa-user-group text-xs text-zinc-400" />
-                            <span>{sleepInfo.text}</span>
-                          </div>
-                          {sleepInfo.warning && (
-                            <span className={`text-[10px] leading-tight font-medium ${
-                              sleepInfo.fitsAll ? 'text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200' : 'text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200'
-                            }`}>
-                              {sleepInfo.warning}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })()}
+                    <div className="inline-flex items-center justify-center gap-1.5 text-zinc-800 text-xs font-bold bg-slate-100/90 px-2.5 py-1 rounded-lg">
+                      <i className="fa-solid fa-user-group text-[11px] text-zinc-500" />
+                      <span>{sleepInfo.capAdults}</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 block mt-0.5 font-medium">Guests</span>
                   </div>
 
                   {/* Col 3: Room Type, Details & Benefits (4 cols) */}
@@ -1249,6 +1237,12 @@ export default function HotelDetailScreen() {
                           {room.bedType || '1 King Bed'}
                         </span>
                       </div>
+                      {sleepInfo.warning && (
+                        <div className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-semibold">
+                          <i className="fa-solid fa-circle-info text-amber-600 text-xs shrink-0" />
+                          <span>{sleepInfo.warning}</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Included Benefits & Policies List */}
@@ -1327,6 +1321,11 @@ export default function HotelDetailScreen() {
                           {currentRoomCount} {currentRoomCount === 1 ? 'room' : 'rooms'}
                         </span>
                       </div>
+                      {recommendedCount > 1 && (
+                        <div className="mb-2 rounded-lg bg-amber-50 border border-amber-200/90 px-2 py-1 text-[10px] text-amber-800 font-semibold text-center leading-tight">
+                          {recommendedCount} rooms needed for {adultsCount} guests
+                        </div>
+                      )}
 
                       {/* Custom Minimalist Trigger Button */}
                       <button
