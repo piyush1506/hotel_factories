@@ -1,5 +1,3 @@
-const fs = require('fs');
-const path = require('path');
 const { Pool } = require('pg');
 const logger = require('../utils/logger');
 const WriteLock = require('../utils/writeLock');
@@ -7,13 +5,11 @@ const config = require('./env');
 
 class DatabaseEngine {
   constructor() {
-    this.dataDir = path.join(__dirname, '../../data');
-    this.dbPath = path.join(this.dataDir, 'hotel_factories_store.json');
     this.data = {
       users: [],
       hotels: [],
       rooms: [],
-      inventoryLocks: [], // Temporary 10-min room holds: { id, roomId, date, count, expiresAt, userId }
+      inventoryLocks: [],
       bookings: [],
       payouts: [],
       webhookEvents: [],
@@ -26,76 +22,20 @@ class DatabaseEngine {
     this.transactionDepth = 0;
     this.writeLock = new WriteLock();
     this.pool = null;
-    this.isPostgres = (process.env.DB_TYPE === 'postgres' || Boolean(process.env.DATABASE_URL) || Boolean(config.DATABASE_URL));
-    this.init();
+    this.connectionString = process.env.DATABASE_URL || config.DATABASE_URL;
+    this.readyPromise = this.init();
   }
 
-  init() {
+  async init() {
     try {
-      this.initJson();
-      const connectionString = process.env.DATABASE_URL || config.DATABASE_URL;
-      if (this.isPostgres && connectionString) {
-        this.initPostgres(connectionString).catch((err) => {
-          logger.warn('PostgreSQL initial connection warning:', err.message);
-        });
-      }
-    } catch (err) {
-      logger.error('Database initialization failed:', err);
-      throw err;
-    }
-  }
-
-  // Wrapper to force JSON mode when DB_TYPE is json
-  initJsonSafe() {
-    try {
-      this.initJson();
-    } catch (err) {
-      logger.error('JSON database initialization failed, falling back to safe mode:', err);
-      this.data = {
-        users: [],
-        hotels: [],
-        rooms: [],
-        inventoryLocks: [],
-        bookings: [],
-        payouts: [],
-        webhookEvents: [],
-        coupons: [],
-        categories: [],
-        reviews: [],
-        favorites: []
-      };
-      this.isLoaded = true;
-    }
-  }
-
-  initJson() {
-    try {
-      if (!fs.existsSync(this.dataDir)) {
-        fs.mkdirSync(this.dataDir, { recursive: true });
+      if (!this.connectionString) {
+        logger.warn('No DATABASE_URL configured. Running with in-memory store.');
+        this.isLoaded = true;
+        return;
       }
 
-      if (fs.existsSync(this.dbPath)) {
-        const fileContent = fs.readFileSync(this.dbPath, 'utf8');
-        this.data = JSON.parse(fileContent);
-        logger.info('Database loaded from local cache.');
-      } else {
-        logger.info('Database local cache initialized.');
-        this.persistLocalOnly();
-      }
-      this.isLoaded = true;
-    } catch (err) {
-      logger.error('Database local cache initialization failed:', err);
-      throw err;
-    }
-  }
-
-  async initPostgres(connStr) {
-    const connectionString = connStr || process.env.DATABASE_URL || config.DATABASE_URL;
-    if (!connectionString) return;
-
-    try {
       this.pool = new Pool({
-        connectionString,
+        connectionString: this.connectionString,
         ssl: { rejectUnauthorized: false },
         max: 10,
         idleTimeoutMillis: 30000,
@@ -104,9 +44,8 @@ class DatabaseEngine {
 
       const client = await this.pool.connect();
       try {
-        logger.info('Connected to PostgreSQL database (Supabase).');
+        logger.info('Connected to PostgreSQL (Supabase) as Primary Database.');
 
-        // Check if hotel_factories_store exists and load data from it
         await client.query(`
           CREATE TABLE IF NOT EXISTS hotel_factories_store (
             collection VARCHAR(100) PRIMARY KEY,
@@ -123,62 +62,65 @@ class DatabaseEngine {
               this.data[row.collection] = row.data;
             }
           }
-          logger.info(`Loaded ${res.rows.length} collections directly from Supabase PostgreSQL.`);
-          this.persistLocalOnly();
-        } else {
-          logger.info('Supabase store table empty. Initializing with current data...');
-          await this.syncToPostgres();
+          logger.info(`Loaded ${res.rows.length} collections directly from PostgreSQL Primary Database.`);
         }
+        this.isLoaded = true;
       } finally {
         client.release();
       }
     } catch (err) {
-      logger.error('PostgreSQL Database initialization failed:', err.message);
+      logger.error('PostgreSQL Primary Database initialization error:', err.message);
+      this.isLoaded = true;
     }
   }
 
-  persist() {
-    this.persistLocalOnly();
-    if (this.pool) {
-      this.syncToPostgres().catch((err) => {
-        logger.warn('PostgreSQL sync failed:', err.message);
-      });
-    }
+  async ready() {
+    if (this.readyPromise) await this.readyPromise;
+    return this.isLoaded;
   }
 
-  persistLocalOnly() {
+  async syncCollectionToPostgres(col) {
+    if (!this.pool) return;
     try {
-      const tempPath = `${this.dbPath}.tmp`;
-      fs.writeFileSync(tempPath, JSON.stringify(this.data, null, 2), 'utf8');
-      fs.renameSync(tempPath, this.dbPath);
+      const items = this.data[col] || [];
+      await this.pool.query(`
+        INSERT INTO hotel_factories_store (collection, data, count, updated_at)
+        VALUES ($1, $2::jsonb, $3, NOW())
+        ON CONFLICT (collection) 
+        DO UPDATE SET data = EXCLUDED.data, count = EXCLUDED.count, updated_at = NOW();
+      `, [col, JSON.stringify(items), items.length]);
     } catch (err) {
-      logger.error('Failed to persist database to disk:', err);
+      logger.error(`PostgreSQL sync error on [${col}]:`, err.message);
     }
   }
 
   async syncToPostgres() {
     if (!this.pool) return;
     try {
-      const client = await this.pool.connect();
-      try {
-        for (const col of Object.keys(this.data)) {
-          const items = this.data[col] || [];
-          await client.query(`
-            INSERT INTO hotel_factories_store (collection, data, count, updated_at)
-            VALUES ($1, $2, $3, NOW())
-            ON CONFLICT (collection) DO UPDATE SET data = EXCLUDED.data, count = EXCLUDED.count, updated_at = NOW();
-          `, [col, JSON.stringify(items), items.length]);
-        }
-      } finally {
-        client.release();
+      for (const col of Object.keys(this.data)) {
+        await this.syncCollectionToPostgres(col);
       }
     } catch (err) {
-      logger.error('PostgreSQL sync error:', err.message);
+      logger.error('PostgreSQL bulk sync error:', err.message);
     }
   }
 
-  persistIfNeeded() {
-    if (this.transactionDepth === 0) this.persist();
+  persist(collectionName = null) {
+    if (collectionName) {
+      this.syncCollectionToPostgres(collectionName).catch((err) => {
+        logger.warn(`PostgreSQL write failed for ${collectionName}:`, err.message);
+      });
+    } else {
+      this.syncToPostgres().catch((err) => {
+        logger.warn('PostgreSQL write failed:', err.message);
+      });
+    }
+  }
+
+  persistIfNeeded(collectionName = null) {
+    if (this.transactionDepth === 0) {
+      this.persist(collectionName);
+    }
   }
 
   async withWriteLock(work) {
@@ -200,11 +142,10 @@ class DatabaseEngine {
     }
   }
 
-  // Periodic cleaner to auto-release expired 10-minute checkout room locks
   startLockCleanerCron() {
     this.cleanerTimer = setInterval(() => {
       this.cleanExpiredLocks();
-    }, 60000); // Check every minute
+    }, 60000);
     this.cleanerTimer.unref?.();
   }
 
@@ -224,11 +165,11 @@ class DatabaseEngine {
     });
     if (this.data.inventoryLocks.length !== initialCount || expiredBookings > 0) {
       logger.info(`Cleaned ${initialCount - this.data.inventoryLocks.length} expired room hold locks.`);
-      this.persistIfNeeded();
+      this.persistIfNeeded('inventoryLocks');
+      this.persistIfNeeded('bookings');
     }
   }
 
-  // Collection Accessors
   getCollection(name) {
     if (!this.data[name]) {
       this.data[name] = [];
@@ -254,7 +195,7 @@ class DatabaseEngine {
   insert(collectionName, doc) {
     const list = this.getCollection(collectionName);
     list.unshift(doc);
-    this.persistIfNeeded();
+    this.persistIfNeeded(collectionName);
     return doc;
   }
 
@@ -264,7 +205,7 @@ class DatabaseEngine {
     if (index === -1) return null;
 
     list[index] = { ...list[index], ...updates, updatedAt: new Date().toISOString() };
-    this.persistIfNeeded();
+    this.persistIfNeeded(collectionName);
     return list[index];
   }
 
@@ -274,7 +215,7 @@ class DatabaseEngine {
     if (index === -1) return false;
 
     list.splice(index, 1);
-    this.persistIfNeeded();
+    this.persistIfNeeded(collectionName);
     return true;
   }
 }

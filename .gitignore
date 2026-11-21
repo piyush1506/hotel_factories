@@ -12,6 +12,7 @@ dist/
 !.env.example
 
 # Runtime data and temporary files
+backend/data/*.json
 backend/data/*.tmp
 *.log
 
