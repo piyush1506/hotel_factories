@@ -27,8 +27,8 @@ module.exports = {
   DEFAULT_COMMISSION_RATE: parseFloat(process.env.DEFAULT_COMMISSION_RATE) || 15.0,
   PLATFORM_CONVENIENCE_FEE: parseFloat(process.env.PLATFORM_CONVENIENCE_FEE) || 99.0,
   ROOM_HOLD_DURATION_MINUTES: parseInt(process.env.ROOM_HOLD_DURATION_MINUTES) || 10,
-  DB_TYPE: process.env.DB_TYPE || 'json',
-  DATABASE_URL: process.env.DATABASE_URL || '',
+  DB_TYPE: process.env.DB_TYPE || 'postgres',
+  DATABASE_URL: process.env.DATABASE_URL || 'postgresql://postgres:j5xuHFP2l01cmqoc@db.ezmzwdewurflhavtpihg.supabase.co:5432/postgres',
 
   // Seed Account Credentials (read from .env, never hardcoded)
   ADMIN_NAME: process.env.ADMIN_NAME || 'Admin',

@@ -3,6 +3,7 @@ const path = require('path');
 const { Pool } = require('pg');
 const logger = require('../utils/logger');
 const WriteLock = require('../utils/writeLock');
+const config = require('./env');
 
 class DatabaseEngine {
   constructor() {
@@ -25,15 +26,16 @@ class DatabaseEngine {
     this.transactionDepth = 0;
     this.writeLock = new WriteLock();
     this.pool = null;
-    this.isPostgres = (process.env.DB_TYPE === 'postgres' || Boolean(process.env.DATABASE_URL));
+    this.isPostgres = (process.env.DB_TYPE === 'postgres' || Boolean(process.env.DATABASE_URL) || Boolean(config.DATABASE_URL));
     this.init();
   }
 
   init() {
     try {
       this.initJson();
-      if (this.isPostgres && process.env.DATABASE_URL) {
-        this.initPostgres().catch((err) => {
+      const connectionString = process.env.DATABASE_URL || config.DATABASE_URL;
+      if (this.isPostgres && connectionString) {
+        this.initPostgres(connectionString).catch((err) => {
           logger.warn('PostgreSQL initial connection warning:', err.message);
         });
       }
@@ -87,8 +89,8 @@ class DatabaseEngine {
     }
   }
 
-  async initPostgres() {
-    const connectionString = process.env.DATABASE_URL;
+  async initPostgres(connStr) {
+    const connectionString = connStr || process.env.DATABASE_URL || config.DATABASE_URL;
     if (!connectionString) return;
 
     try {
@@ -117,7 +119,7 @@ class DatabaseEngine {
         const res = await client.query('SELECT collection, data FROM hotel_factories_store;');
         if (res.rows && res.rows.length > 0) {
           for (const row of res.rows) {
-            if (row.collection && Array.isArray(row.data)) {
+            if (row.collection && Array.isArray(row.data) && row.data.length > 0) {
               this.data[row.collection] = row.data;
             }
           }
