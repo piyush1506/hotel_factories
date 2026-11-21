@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const db = require('../config/database');
 
 const authRoutes = require('./authRoutes');
 const hotelRoutes = require('./hotelRoutes');
@@ -14,9 +15,24 @@ const hotelierRoutes = require('./hotelierRoutes');
 
 // Health Check API
 router.get('/health', (req, res) => {
+  const isConnected = Boolean(db.pool);
+  const hotelsCount = db.getCollection('hotels').length;
+  const roomsCount = db.getCollection('rooms').length;
+  const usersCount = db.getCollection('users').length;
+
   res.status(200).json({
     status: 'online',
     service: 'Hotel Factories Multi-Vendor Booking Engine',
+    database: {
+      engine: 'PostgreSQL (Supabase)',
+      connected: isConnected,
+      isLoaded: db.isLoaded,
+      stats: {
+        hotels: hotelsCount,
+        rooms: roomsCount,
+        users: usersCount
+      }
+    },
     timestamp: new Date().toISOString(),
     version: '1.0.0'
   });
