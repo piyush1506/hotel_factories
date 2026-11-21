@@ -9,7 +9,7 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
-  allowedDevOrigins: ['*'],
+  allowedDevOrigins: ['*.trycloudflare.com', 'localhost:3001', '10.33.251.95:3001', '*.loca.lt'],
   async rewrites() {
     const backendUrl = process.env.BACKEND_API_URL || 'http://127.0.0.1:5050';
     return [
