@@ -3,6 +3,20 @@ const logger = require('../utils/logger');
 const WriteLock = require('../utils/writeLock');
 const config = require('./env');
 
+function normalizeConnectionString(connStr) {
+  if (!connStr) return connStr;
+  // Render and certain hosting providers operate in IPv4-only networks.
+  // Supabase direct host (db.<ref>.supabase.co) resolves only to IPv6, causing ENETUNREACH.
+  // Automatically route through Supabase IPv4 connection pooler.
+  const directMatch = connStr.match(/postgresql:\/\/([^:]+):([^@]+)@db\.([a-zA-Z0-9]+)\.supabase\.co:(\d+)\/(.+)/);
+  if (directMatch) {
+    const [, user, pass, ref, port, dbName] = directMatch;
+    const poolUser = user.includes('.') ? user : `${user}.${ref}`;
+    return `postgresql://${poolUser}:${pass}@aws-1-ap-northeast-1.pooler.supabase.com:${port}/${dbName}`;
+  }
+  return connStr;
+}
+
 class DatabaseEngine {
   constructor() {
     this.data = {
@@ -22,7 +36,7 @@ class DatabaseEngine {
     this.transactionDepth = 0;
     this.writeLock = new WriteLock();
     this.pool = null;
-    this.connectionString = process.env.DATABASE_URL || config.DATABASE_URL;
+    this.connectionString = normalizeConnectionString(process.env.DATABASE_URL || config.DATABASE_URL);
     this.readyPromise = this.init();
   }
 

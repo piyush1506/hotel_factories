@@ -28,7 +28,7 @@ module.exports = {
   PLATFORM_CONVENIENCE_FEE: parseFloat(process.env.PLATFORM_CONVENIENCE_FEE) || 99.0,
   ROOM_HOLD_DURATION_MINUTES: parseInt(process.env.ROOM_HOLD_DURATION_MINUTES) || 10,
   DB_TYPE: process.env.DB_TYPE || 'postgres',
-  DATABASE_URL: process.env.DATABASE_URL || 'postgresql://postgres:j5xuHFP2l01cmqoc@db.ezmzwdewurflhavtpihg.supabase.co:5432/postgres',
+  DATABASE_URL: process.env.DATABASE_URL || 'postgresql://postgres.ezmzwdewurflhavtpihg:j5xuHFP2l01cmqoc@aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres',
 
   // Seed Account Credentials (read from .env, never hardcoded)
   ADMIN_NAME: process.env.ADMIN_NAME || 'Admin',
