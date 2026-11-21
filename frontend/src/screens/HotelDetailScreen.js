@@ -1207,11 +1207,8 @@ export default function HotelDetailScreen() {
                     </div>
                   </div>
 
-                  {/* Col 2: Sleeps (1 col) - Clean compact badge */}
-                  <div className="lg:col-span-1 text-left lg:text-center pt-1 sm:pt-2">
-                    <span className="lg:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">
-                      SLEEPS
-                    </span>
+                  {/* Col 2: Sleeps (1 col on desktop, hidden on mobile) */}
+                  <div className="hidden lg:block lg:col-span-1 text-center pt-2">
                     <div className="inline-flex items-center justify-center gap-1.5 text-zinc-800 text-xs font-bold bg-slate-100/90 px-2.5 py-1 rounded-lg">
                       <i className="fa-solid fa-user-group text-[11px] text-zinc-500" />
                       <span>{sleepInfo.capAdults}</span>
@@ -1223,10 +1220,18 @@ export default function HotelDetailScreen() {
                   <div className="lg:col-span-4 space-y-3 pt-0 sm:pt-1 text-xs">
                     {/* Room Name, Size & Bed Details */}
                     <div>
-                      <h3 className="font-bold text-base text-slate-900 leading-snug">
-                        {room.name}
-                      </h3>
-                      <div className="flex items-center gap-2.5 text-xs text-slate-500 mt-1 flex-wrap">
+                      <div className="flex items-start justify-between gap-2 flex-wrap">
+                        <h3 className="font-bold text-base sm:text-lg text-slate-900 leading-snug">
+                          {room.name}
+                        </h3>
+                        {/* Mobile Sleeps Badge */}
+                        <div className="lg:hidden inline-flex items-center gap-1.5 text-zinc-800 text-xs font-bold bg-slate-100 px-2.5 py-1 rounded-lg shrink-0">
+                          <i className="fa-solid fa-user-group text-[10px] text-zinc-500" />
+                          <span>{sleepInfo.capAdults} Guests</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs text-slate-500 mt-1.5 flex-wrap">
                         <span className="inline-flex items-center gap-1">
                           <i className="fa-solid fa-ruler-combined text-[11px] text-slate-400" />
                           {room.size || '52 m² / 560 sq ft'}
@@ -1236,9 +1241,18 @@ export default function HotelDetailScreen() {
                           <i className="fa-solid fa-bed text-[11px] text-slate-400" />
                           {room.bedType || '1 King Bed'}
                         </span>
+                        {room.isCombo && (
+                          <>
+                            <span className="text-slate-300">•</span>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold">
+                              <i className="fa-solid fa-check text-[9px] text-emerald-600" />
+                              <span>Accommodates all 5 in 1 combo</span>
+                            </span>
+                          </>
+                        )}
                       </div>
                       {sleepInfo.warning && (
-                        <div className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-semibold">
+                        <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-semibold max-w-full">
                           <i className="fa-solid fa-circle-info text-amber-600 text-xs shrink-0" />
                           <span>{sleepInfo.warning}</span>
                         </div>
@@ -1290,116 +1304,118 @@ export default function HotelDetailScreen() {
                     </div>
                   </div>
 
-                  {/* Col 4: Price (2 cols) */}
-                  <div className="lg:col-span-2 text-left lg:text-right pt-2">
-                    {multiNightOriginal > multiNightPrice && (
-                      <del className="text-xs text-zinc-400 font-medium block">
-                        {formatPrice(multiNightOriginal * currentRoomCount)}
-                      </del>
-                    )}
-                    <div className="text-2xl font-black text-zinc-900 leading-tight tracking-tight whitespace-nowrap">
-                      {formatPrice(totalPriceForRoom)}
-                    </div>
-                    <span className="text-[11px] text-zinc-500 block mt-0.5">
-                      for {nights} {nights === 1 ? 'night' : 'nights'}
-                      {currentRoomCount > 1 ? ` · ${currentRoomCount} rooms` : ''}
-                    </span>
-                    <span className="text-[10px] text-zinc-400 block mt-0.5">+ Taxes &amp; charges</span>
-                    <span className="text-[11px] font-semibold text-zinc-700 block mt-1">
-                      {formatPrice(basePrice)} / night
-                    </span>
-                  </div>
-
-                  {/* Col 5: Select & Reserve (2 cols) */}
-                  <div className="lg:col-span-2 pt-2 flex flex-col gap-2.5">
-                    <div className="w-full relative" data-room-dropdown="true">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          ROOMS COUNT:
-                        </label>
-                        <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded">
-                          {currentRoomCount} {currentRoomCount === 1 ? 'room' : 'rooms'}
-                        </span>
+                  {/* Col 4 & 5: Combined Price & Action Area (Responsive across Mobile & Desktop) */}
+                  <div className="lg:col-span-4 border-t lg:border-t-0 border-slate-100 pt-3 lg:pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 items-end">
+                    {/* Price Block */}
+                    <div className="text-left lg:text-right">
+                      {multiNightOriginal > multiNightPrice && (
+                        <del className="text-xs text-zinc-400 font-medium block">
+                          {formatPrice(multiNightOriginal * currentRoomCount)}
+                        </del>
+                      )}
+                      <div className="text-2xl font-black text-zinc-900 leading-tight tracking-tight whitespace-nowrap">
+                        {formatPrice(totalPriceForRoom)}
                       </div>
+                      <span className="text-[11px] text-zinc-500 block mt-0.5">
+                        for {nights} {nights === 1 ? 'night' : 'nights'}
+                        {currentRoomCount > 1 ? ` · ${currentRoomCount} rooms` : ''}
+                      </span>
+                      <span className="text-[10px] text-zinc-400 block mt-0.5">+ Taxes &amp; charges</span>
+                      <span className="text-[11px] font-semibold text-zinc-700 block mt-1">
+                        {formatPrice(basePrice)} / night
+                      </span>
+                    </div>
 
-                      {/* Custom Minimalist Trigger Button */}
-                      <button
-                        type="button"
-                        onClick={() => setOpenRoomDropdownId(openRoomDropdownId === room.id ? null : room.id)}
-                        className={`w-full px-3 py-2 rounded-xl border text-xs font-bold flex items-center justify-between transition-all cursor-pointer ${
-                          openRoomDropdownId === room.id
-                            ? 'border-black ring-2 ring-black/10 bg-zinc-50 text-black shadow-xs'
-                            : 'border-zinc-300 hover:border-black bg-white text-slate-800 shadow-2xs'
-                        }`}
-                        aria-expanded={openRoomDropdownId === room.id}
-                      >
-                        <span className="flex items-center gap-1.5 truncate">
-                          <i className="fa-solid fa-door-open text-[11px] text-zinc-400" />
-                          <span>{currentRoomCount} {currentRoomCount === 1 ? 'Room' : 'Rooms'}</span>
-                          <span className="text-[11px] font-medium text-zinc-400">({formatPrice(totalPriceForRoom)})</span>
-                        </span>
-                        <i
-                          className={`fa-solid fa-chevron-down text-[10px] text-zinc-400 transition-transform duration-200 ${
-                            openRoomDropdownId === room.id ? 'rotate-180 text-black' : ''
+                    {/* Select Room & Reserve CTA */}
+                    <div className="flex flex-col gap-2">
+                      <div className="w-full relative" data-room-dropdown="true">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            ROOMS:
+                          </label>
+                          <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded">
+                            {currentRoomCount} {currentRoomCount === 1 ? 'room' : 'rooms'}
+                          </span>
+                        </div>
+
+                        {/* Custom Minimalist Trigger Button */}
+                        <button
+                          type="button"
+                          onClick={() => setOpenRoomDropdownId(openRoomDropdownId === room.id ? null : room.id)}
+                          className={`w-full px-3 py-2 rounded-xl border text-xs font-bold flex items-center justify-between transition-all cursor-pointer ${
+                            openRoomDropdownId === room.id
+                              ? 'border-black ring-2 ring-black/10 bg-zinc-50 text-black shadow-xs'
+                              : 'border-zinc-300 hover:border-black bg-white text-slate-800 shadow-2xs'
                           }`}
-                        />
-                      </button>
+                          aria-expanded={openRoomDropdownId === room.id}
+                        >
+                          <span className="flex items-center gap-1.5 truncate">
+                            <i className="fa-solid fa-door-open text-[11px] text-zinc-400" />
+                            <span>{currentRoomCount} {currentRoomCount === 1 ? 'Room' : 'Rooms'}</span>
+                          </span>
+                          <i
+                            className={`fa-solid fa-chevron-down text-[10px] text-zinc-400 transition-transform duration-200 ${
+                              openRoomDropdownId === room.id ? 'rotate-180 text-black' : ''
+                            }`}
+                          />
+                        </button>
 
-                      {/* Custom Luxury Dropdown Popover */}
-                      {openRoomDropdownId === room.id && (
-                        <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white border border-zinc-200/90 rounded-2xl shadow-xl shadow-black/10 p-1.5 space-y-1 backdrop-blur-md animate-in fade-in zoom-in-95 duration-150">
-                          <div className="px-2 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-100 mb-1 flex items-center justify-between">
-                            <span>Quantity</span>
-                            <span>Total Stay</span>
-                          </div>
-                          {[1, 2, 3, 4, 5].map((count) => {
-                            const isSelected = currentRoomCount === count;
-                            const total = multiNightPrice * count;
-                            return (
-                              <button
-                                key={count}
-                                type="button"
-                                onClick={() => {
-                                  setRoomCounts((prev) => ({ ...prev, [room.id]: count }));
-                                  setOpenRoomDropdownId(null);
-                                }}
-                                className={`w-full px-2.5 py-2 rounded-xl text-xs flex items-center justify-between transition-all cursor-pointer ${
-                                  isSelected
-                                    ? 'bg-[#0ea5e9] text-white font-bold shadow-xs'
-                                    : 'text-zinc-800 hover:bg-zinc-100 font-semibold'
-                                }`}
-                              >
-                                <span className="flex items-center gap-2">
-                                  {isSelected ? (
-                                    <i className="fa-solid fa-check text-[10px] text-white" />
-                                  ) : (
-                                    <span className="w-2 h-2 rounded-full border border-zinc-300 inline-block" />
-                                  )}
-                                  <span>{count} {count === 1 ? 'Room' : 'Rooms'}</span>
-                                </span>
-                                <span
-                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                    isSelected ? 'bg-white/20 text-white' : 'bg-zinc-100 text-zinc-600'
+                        {/* Custom Luxury Dropdown Popover */}
+                        {openRoomDropdownId === room.id && (
+                          <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white border border-zinc-200/90 rounded-2xl shadow-xl shadow-black/10 p-1.5 space-y-1 backdrop-blur-md animate-in fade-in zoom-in-95 duration-150">
+                            <div className="px-2 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-100 mb-1 flex items-center justify-between">
+                              <span>Quantity</span>
+                              <span>Total Stay</span>
+                            </div>
+                            {[1, 2, 3, 4, 5].map((count) => {
+                              const isSelected = currentRoomCount === count;
+                              const total = multiNightPrice * count;
+                              return (
+                                <button
+                                  key={count}
+                                  type="button"
+                                  onClick={() => {
+                                    setRoomCounts((prev) => ({ ...prev, [room.id]: count }));
+                                    setOpenRoomDropdownId(null);
+                                  }}
+                                  className={`w-full px-2.5 py-2 rounded-xl text-xs flex items-center justify-between transition-all cursor-pointer ${
+                                    isSelected
+                                      ? 'bg-[#0ea5e9] text-white font-bold shadow-xs'
+                                      : 'text-zinc-800 hover:bg-zinc-100 font-semibold'
                                   }`}
                                 >
-                                  {formatPrice(total)}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
+                                  <span className="flex items-center gap-2">
+                                    {isSelected ? (
+                                      <i className="fa-solid fa-check text-[10px] text-white" />
+                                    ) : (
+                                      <span className="w-2 h-2 rounded-full border border-zinc-300 inline-block" />
+                                    )}
+                                    <span>{count} {count === 1 ? 'Room' : 'Rooms'}</span>
+                                  </span>
+                                  <span
+                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                      isSelected ? 'bg-white/20 text-white' : 'bg-zinc-100 text-zinc-600'
+                                    }`}
+                                  >
+                                    {formatPrice(total)}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleReserveRoom(room, currentImage)}
-                      className="w-full py-2.5 px-3 rounded-xl bg-[#0ea5e9] hover:bg-[#0284c7] active:scale-[0.98] text-white text-xs font-bold shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      <span>I&#39;ll Reserve</span>
-                      <i className="fa-solid fa-chevron-right text-[10px]" />
-                    </button>
-                    <span className="text-[10px] text-slate-400 text-center block">Instant confirmation in 2 mins</span>
+                      <button
+                        type="button"
+                        onClick={() => handleReserveRoom(room, currentImage)}
+                        className="w-full py-2.5 px-3 rounded-xl bg-[#0ea5e9] hover:bg-[#0284c7] active:scale-[0.98] text-white text-xs font-bold shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        <span>I&#39;ll Reserve</span>
+                        <i className="fa-solid fa-chevron-right text-[10px]" />
+                      </button>
+                      <span className="text-[10px] text-slate-400 text-center block">Instant confirmation in 2 mins</span>
+                    </div>
                   </div>
 
                 </div>

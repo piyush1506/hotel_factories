@@ -772,7 +772,7 @@ export default function HomeScreen() {
                   {/* Date Picker Popover */}
                   {activePopover === 'checkin' && (
                     <div 
-                      className="absolute left-0 top-[calc(100%+8px)] z-50 shadow-2xl rounded-2xl"
+                      className="absolute left-0 top-[calc(100%+8px)] z-50 shadow-2xl rounded-2xl max-w-[calc(100vw-32px)] overflow-hidden"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <CustomDatePicker
@@ -814,7 +814,7 @@ export default function HomeScreen() {
                   {/* Date Picker Popover */}
                   {activePopover === 'checkout' && (
                     <div 
-                      className="absolute left-0 lg:-left-20 top-[calc(100%+8px)] z-50 shadow-2xl rounded-2xl"
+                      className="absolute left-0 lg:-left-20 top-[calc(100%+8px)] z-50 shadow-2xl rounded-2xl max-w-[calc(100vw-32px)] overflow-hidden"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <CustomDatePicker

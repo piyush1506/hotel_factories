@@ -1,11 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 
 export default function AuthSheet() {
-  const { isAuthSheetOpen, closeAllSheets, login, register, user, logout, updateProfile, switchNav } = useApp();
-  const [tab, setTab] = useState('login'); // 'login' | 'register'
+  const { isAuthSheetOpen, closeAllSheets, login, register, user, logout, updateProfile, switchNav, authTab } = useApp();
+  const [tab, setTab] = useState(authTab || 'login'); // 'login' | 'register'
+  
+  // Sync local tab with context authTab (e.g. forced register when a guest books)
+  useEffect(() => {
+    if (isAuthSheetOpen && authTab) {
+      setTab(authTab);
+    }
+  }, [authTab, isAuthSheetOpen]);
   
   // Profile edit state
   const [isEditingName, setIsEditingName] = useState(false);

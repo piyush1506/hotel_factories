@@ -393,9 +393,13 @@ export default function CustomDatePicker({
       </div>
 
       {/* Calendar Months Container (Dual Month on Desktop, Single on Mobile) */}
-      <div className={`custom-datepicker-months py-4 flex gap-6 overflow-x-auto ${isDualMonth ? 'dual-view flex-col md:flex-row' : 'single-view'}`}>
+      <div className={`custom-datepicker-months py-3 flex gap-6 overflow-x-auto ${isDualMonth ? 'dual-view flex-col md:flex-row' : 'single-view'}`}>
         {renderMonth(month1Year, month1Index, month1Matrix)}
-        {isDualMonth && renderMonth(month2Year, month2Index, month2Matrix)}
+        {isDualMonth && (
+          <div className="hidden md:block flex-1 min-w-[280px]">
+            {renderMonth(month2Year, month2Index, month2Matrix)}
+          </div>
+        )}
       </div>
 
       {/* Quick Select Presets Bar */}

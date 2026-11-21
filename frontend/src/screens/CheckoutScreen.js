@@ -237,15 +237,15 @@ export default function CheckoutScreen() {
         ) : (
           <div className="p-4 rounded-2xl bg-slate-900 text-white flex items-center justify-between gap-4 mb-6 shadow-sm flex-wrap sm:flex-nowrap">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-300 flex items-center justify-center text-base shrink-0">
-                <i className="fa-regular fa-user" />
+              <div className="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-300 flex items-center justify-center text-base shrink-0">
+                <i className="fa-solid fa-triangle-exclamation" />
               </div>
               <div>
                 <span className="text-xs sm:text-sm font-bold block">
-                  Booking as Guest
+                  Account Required to Book
                 </span>
                 <span className="block text-[11px] text-slate-300 mt-0.5">
-                  Sign in to track your reservation, unlock instant member discounts, and earn reward points.
+                  Guest booking is not allowed. Please create an account to complete this reservation.
                 </span>
               </div>
             </div>
@@ -260,6 +260,25 @@ export default function CheckoutScreen() {
             )}
           </div>
         )}
+
+        {/* Mobile Quick Booking Summary Bar (Visible only on < lg mobile devices) */}
+        <div className="lg:hidden mb-5 p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-sky-600 block mb-0.5">
+                Your Selection
+              </span>
+              <h3 className="font-bold text-sm text-slate-900 truncate">{hotel.name}</h3>
+              <p className="text-xs text-slate-500 mt-0.5 truncate">
+                {room.name} · {nights} {nights === 1 ? 'Night' : 'Nights'}
+              </p>
+            </div>
+            <div className="text-right shrink-0 bg-slate-50 border border-slate-100 px-3 py-2 rounded-xl">
+              <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">TOTAL</span>
+              <span className="text-base font-black text-slate-900">{formatPrice(finalPayableAmount)}</span>
+            </div>
+          </div>
+        </div>
 
         {/* 2-Column Checkout Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">

@@ -497,8 +497,10 @@ export const AppProvider = ({ children, initialScreen = 'home' }) => {
    */
   const handleCreateBooking = async (payload) => {
     if (!authToken) {
+      // Guest booking is not allowed: force account creation (register tab)
+      setAuthTab('register');
       setIsAuthSheetOpen(true);
-      throw new Error('Please sign in before booking.');
+      throw new Error('Account creation is required to book a room. Guest booking is not allowed. Please create an account to continue.');
     }
     const holdRes = await bookingAPI.hold({
       roomId: payload.roomId,

@@ -55,6 +55,7 @@ export default function SearchScreen() {
   const [selectedCategory, setSelectedCategory] = useState(() => contextCategory || 'All');
   const [activeDealFilter, setActiveDealFilter] = useState('all'); // 'all' | 'flash' | 'budget' | 'under999' | 'exclusive'
   const [activeQuickChip, setActiveQuickChip] = useState(null);
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
   // Stable clean categories matching the platform theme
   const availableCategories = useMemo(() => {
@@ -625,8 +626,8 @@ export default function SearchScreen() {
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6">
         <div className="flex flex-col lg:flex-row gap-6 items-start">
           
-          {/* ======================= LEFT COLUMN: SIDEBAR ======================= */}
-          <aside className="w-full lg:w-[280px] xl:w-[300px] shrink-0 space-y-4">
+          {/* ======================= LEFT COLUMN: SIDEBAR (Desktop) ======================= */}
+          <aside className="hidden lg:block lg:w-[280px] xl:w-[300px] shrink-0 space-y-4">
             
             {/* 1. Simple Keyword Search Card */}
             <div className="rounded-2xl p-4 bg-white border border-slate-200/90 shadow-2xs">
@@ -890,6 +891,73 @@ export default function SearchScreen() {
           {/* ======================= RIGHT COLUMN: RESULTS ======================= */}
           <main className="flex-1 w-full min-w-0 space-y-4">
             
+            {/* Mobile Filter & Search Bar (Visible only on < lg mobile devices) */}
+            <div className="lg:hidden w-full space-y-2.5">
+              <div className="flex items-center gap-2">
+                {/* Mobile Filter Trigger Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsMobileFiltersOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs shadow-xs hover:bg-black active:scale-95 transition-all cursor-pointer shrink-0"
+                >
+                  <i className="fa-solid fa-sliders text-xs text-sky-400" />
+                  <span>Filters</span>
+                  {((selectedPriceTier !== 'all' ? 1 : 0) + (minRating > 0 ? 1 : 0) + selectedLocalities.length + selectedAmenities.length + (selectedCategory !== 'All' ? 1 : 0) + (aiFilterQuery.trim() ? 1 : 0) + (activeDealFilter !== 'all' ? 1 : 0)) > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-sky-500 text-white text-[10px] font-black flex items-center justify-center leading-none">
+                      {(selectedPriceTier !== 'all' ? 1 : 0) + (minRating > 0 ? 1 : 0) + selectedLocalities.length + selectedAmenities.length + (selectedCategory !== 'All' ? 1 : 0) + (aiFilterQuery.trim() ? 1 : 0) + (activeDealFilter !== 'all' ? 1 : 0)}
+                    </span>
+                  )}
+                </button>
+
+                {/* Mobile Search Input */}
+                <div className="flex-1 min-w-0 bg-white rounded-xl border border-slate-200 px-3 py-2 flex items-center gap-2 shadow-2xs">
+                  <i className="fa-solid fa-magnifying-glass text-slate-400 text-xs shrink-0" />
+                  <input
+                    type="text"
+                    value={aiFilterQuery}
+                    onChange={(e) => setAiFilterQuery(e.target.value)}
+                    placeholder="Search hotel name or area..."
+                    className="w-full bg-transparent text-xs text-slate-800 placeholder:text-slate-400 outline-none font-medium"
+                  />
+                  {aiFilterQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setAiFilterQuery('')}
+                      className="text-slate-400 hover:text-slate-700 text-xs cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Mobile Quick Horizontal Scrollable Filter Chips */}
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-xs">
+                {[
+                  { id: 'all_prices', label: 'All Stays', active: selectedPriceTier === 'all', onClick: () => setSelectedPriceTier('all') },
+                  { id: 'under2k', label: 'Under ₹2K', active: selectedPriceTier === 'under2k', onClick: () => setSelectedPriceTier(selectedPriceTier === 'under2k' ? 'all' : 'under2k') },
+                  { id: '2k-4k', label: '₹2K - ₹4K', active: selectedPriceTier === '2k-4k', onClick: () => setSelectedPriceTier(selectedPriceTier === '2k-4k' ? 'all' : '2k-4k') },
+                  { id: 'rating_4', label: '★ 4.0+', active: minRating === 4.0, onClick: () => setMinRating(minRating === 4.0 ? 0 : 4.0) },
+                  { id: 'breakfast', label: 'Free Breakfast', active: selectedAmenities.includes('Breakfast'), onClick: () => handleAmenityToggle('Breakfast') },
+                  { id: 'pool', label: 'Swimming Pool', active: selectedAmenities.includes('Swimming Pool'), onClick: () => handleAmenityToggle('Swimming Pool') },
+                  { id: 'wifi', label: 'Free WiFi', active: selectedAmenities.includes('WiFi'), onClick: () => handleAmenityToggle('WiFi') },
+                ].map(chip => (
+                  <button
+                    key={chip.id}
+                    type="button"
+                    onClick={chip.onClick}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer border ${
+                      chip.active
+                        ? 'bg-sky-500 text-white border-sky-500 shadow-2xs'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Top 4 Promotional Deal Cards - Clean Luxury Theme with Live Counts & Active States */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               
@@ -1443,7 +1511,7 @@ export default function SearchScreen() {
                         </div>
 
                         {/* 3. Right: Pricing & CTA */}
-                        <div className="p-4 sm:p-5 sm:border-l border-slate-100 flex flex-col justify-between items-start sm:items-end w-full sm:w-48 md:w-56 shrink-0 bg-slate-50/50">
+                        <div className="p-3.5 sm:p-5 sm:border-l border-slate-100 flex flex-row sm:flex-col justify-between items-center sm:items-end w-full sm:w-48 md:w-56 shrink-0 bg-slate-50/50 border-t sm:border-t-0 gap-3">
                           {/* Desktop Wishlist Button */}
                           <div className="hidden sm:flex justify-end w-full">
                             <button
@@ -1462,7 +1530,7 @@ export default function SearchScreen() {
                           </div>
 
                           {/* Price Details Block */}
-                          <div className="w-full sm:text-right mt-1 sm:mt-0">
+                          <div className="sm:w-full sm:text-right">
                             <div className="flex items-center sm:justify-end gap-1.5 text-xs font-bold text-[#0ea5e9]">
                               <span>{discountPercent}% off</span>
                               <span className="text-slate-500 font-semibold line-through decoration-rose-500/70 text-[11px]">
@@ -1481,14 +1549,14 @@ export default function SearchScreen() {
                           </div>
 
                           {/* Select Room Action CTA */}
-                          <div className="w-full mt-2">
+                          <div className="shrink-0 sm:w-full sm:mt-2">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleHotelClick(hotelId, hotel);
                               }}
-                              className="w-full py-2.5 px-3 rounded-xl bg-[#0ea5e9] hover:bg-[#0284c7] active:scale-[0.98] text-white font-bold text-xs uppercase tracking-wider shadow-xs hover:shadow-md transition-all cursor-pointer text-center"
+                              className="px-5 py-2.5 sm:w-full rounded-xl bg-[#0ea5e9] hover:bg-[#0284c7] active:scale-[0.98] text-white font-bold text-xs uppercase tracking-wider shadow-xs hover:shadow-md transition-all cursor-pointer text-center whitespace-nowrap"
                             >
                               Select room
                             </button>
@@ -1525,6 +1593,164 @@ export default function SearchScreen() {
 
         </div>
       </div>
+
+      {/* =========================================================================
+          MOBILE FILTERS BOTTOM SHEET / SLIDE-UP DRAWER (Mobile & Tablet)
+          ========================================================================= */}
+      {isMobileFiltersOpen && (
+        <div 
+          className="fixed inset-0 z-[1100] lg:hidden flex flex-col justify-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => setIsMobileFiltersOpen(false)}
+        >
+          <div
+            className="bg-white rounded-t-3xl max-h-[88vh] flex flex-col w-full overflow-hidden shadow-2xl animate-in slide-in-from-bottom duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Sheet Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <i className="fa-solid fa-sliders text-sky-500 text-sm" />
+                <h3 className="text-base font-extrabold text-slate-900">Filters &amp; Preferences</h3>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleClearAllFilters}
+                  className="text-xs font-bold text-rose-500 hover:underline cursor-pointer"
+                >
+                  Clear all
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileFiltersOpen(false)}
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors cursor-pointer"
+                  aria-label="Close filters"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable Filter Options */}
+            <div className="p-5 overflow-y-auto space-y-4 text-xs">
+              {/* 1. Price Per Night */}
+              <div className="border-b border-slate-100 pb-3">
+                <div className="font-extrabold text-slate-800 uppercase tracking-wider mb-2">Price per night</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'all', label: 'All Prices' },
+                    { id: 'under2k', label: 'Under ₹2,000' },
+                    { id: '2k-4k', label: '₹2,000 - ₹4,000' },
+                    { id: '4k-8k', label: '₹4,000 - ₹8,000' },
+                    { id: 'above8k', label: '₹8,000+' }
+                  ].map(tier => (
+                    <button
+                      key={tier.id}
+                      type="button"
+                      onClick={() => setSelectedPriceTier(tier.id)}
+                      className={`p-2.5 rounded-xl border text-left font-bold transition-all cursor-pointer ${
+                        selectedPriceTier === tier.id
+                          ? 'border-sky-500 bg-sky-50 text-sky-700 shadow-2xs'
+                          : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      {tier.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 2. Customer Rating */}
+              <div className="border-b border-slate-100 pb-3">
+                <div className="font-extrabold text-slate-800 uppercase tracking-wider mb-2">Customer Rating</div>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { val: 0, label: 'All Ratings' },
+                    { val: 4.5, label: '★ 4.5+ Exceptional' },
+                    { val: 4.0, label: '★ 4.0+ Very Good' },
+                    { val: 3.5, label: '★ 3.5+ Good' }
+                  ].map(r => (
+                    <button
+                      key={r.val}
+                      type="button"
+                      onClick={() => setMinRating(r.val)}
+                      className={`px-3 py-2 rounded-xl border font-bold transition-all cursor-pointer ${
+                        minRating === r.val
+                          ? 'border-sky-500 bg-sky-50 text-sky-700 shadow-2xs'
+                          : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. Popular Localities */}
+              {localityOptions.length > 0 && (
+                <div className="border-b border-slate-100 pb-3">
+                  <div className="font-extrabold text-slate-800 uppercase tracking-wider mb-2">Localities</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {localityOptions.map(loc => (
+                      <button
+                        key={loc}
+                        type="button"
+                        onClick={() => handleLocalityToggle(loc)}
+                        className={`px-3 py-1.5 rounded-lg border font-bold transition-all cursor-pointer ${
+                          selectedLocalities.includes(loc)
+                            ? 'border-sky-500 bg-sky-50 text-sky-700 shadow-2xs'
+                            : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        {loc}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 4. Amenities */}
+              <div>
+                <div className="font-extrabold text-slate-800 uppercase tracking-wider mb-2">Popular Amenities</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'Breakfast', label: 'Free Breakfast' },
+                    { id: 'Swimming Pool', label: 'Swimming Pool' },
+                    { id: 'WiFi', label: 'Free WiFi' },
+                    { id: 'Air Conditioning', label: 'AC' },
+                    { id: 'Spa', label: 'Spa & Wellness' },
+                    { id: 'Parking', label: 'Free Parking' }
+                  ].map(am => (
+                    <button
+                      key={am.id}
+                      type="button"
+                      onClick={() => handleAmenityToggle(am.id)}
+                      className={`p-2 rounded-xl border text-left font-bold transition-all cursor-pointer ${
+                        selectedAmenities.includes(am.id)
+                          ? 'border-sky-500 bg-sky-50 text-sky-700 shadow-2xs'
+                          : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      {selectedAmenities.includes(am.id) ? '✓ ' : '+ '}{am.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Apply Action */}
+            <div className="p-4 border-t border-slate-100 bg-white shadow-md">
+              <button
+                type="button"
+                onClick={() => setIsMobileFiltersOpen(false)}
+                className="w-full py-3 rounded-xl bg-slate-900 hover:bg-black text-white font-extrabold text-sm shadow-md transition-all active:scale-[0.98] cursor-pointer text-center"
+              >
+                Apply &amp; Show {sortedHotels.length} {sortedHotels.length === 1 ? 'Stay' : 'Stays'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating Wishlist Action Button on Bottom Right - Brand Coral Red */}
       <button
