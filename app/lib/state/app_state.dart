@@ -549,12 +549,13 @@ class AppState extends ChangeNotifier {
 
   List<Hotel> hotelsInCity(String city) => hotels.where((hotel) => hotel.city == city).toList();
 
-  List<Hotel> get filteredHotels {
+  List<Hotel> resultsFor(SearchFilters source, {String? category}) {
+    final activeFilters = source;
     final query = criteria.isAllDestinations ? '' : criteria.destination.trim().toLowerCase();
-    final keyword = filters.keyword.trim().toLowerCase();
-    final category = selectedCategory.toLowerCase().trim();
+    final keyword = activeFilters.keyword.trim().toLowerCase();
+    final categoryValue = (category ?? selectedCategory).toLowerCase().trim();
 
-    Iterable<Hotel> results = hotels.where((hotel) {
+    final results = hotels.where((hotel) {
       if (query.isNotEmpty && query != 'near me') {
         final haystack = [
           hotel.name,
@@ -583,7 +584,7 @@ class AppState extends ChangeNotifier {
       }
 
       final price = hotel.startingPrice;
-      switch (filters.priceTier) {
+      switch (activeFilters.priceTier) {
         case 'under2k':
           if (price >= 2000) return false;
           break;
@@ -598,42 +599,42 @@ class AppState extends ChangeNotifier {
           break;
       }
 
-      if (filters.minRating > 0 && hotel.rating < filters.minRating) return false;
+      if (activeFilters.minRating > 0 && hotel.rating < activeFilters.minRating) return false;
 
-      if (category != 'all' && category.isNotEmpty) {
+      if (categoryValue != 'all' && categoryValue.isNotEmpty) {
         final hotelCategory = hotel.category.toLowerCase().trim();
-        final isCombo = category.contains('combo') || category.contains('dorm');
+        final isCombo = categoryValue.contains('combo') || categoryValue.contains('dorm');
         final matches = (isCombo &&
                 (hotelCategory.contains('combo') ||
                     hotelCategory.contains('dorm') ||
                     hotel.rooms.any((room) =>
                         room.type.toLowerCase().contains('dorm') ||
                         room.name.toLowerCase().contains('combo')))) ||
-            hotelCategory == category ||
-            hotelCategory.replaceAll(RegExp(r's$'), '') == category.replaceAll(RegExp(r's$'), '') ||
-            (category == 'hotels' &&
+            hotelCategory == categoryValue ||
+            hotelCategory.replaceAll(RegExp(r's$'), '') == categoryValue.replaceAll(RegExp(r's$'), '') ||
+            (categoryValue == 'hotels' &&
                 (hotelCategory == 'hotel' || hotelCategory == 'hotels' || hotelCategory == 'all'));
         if (!matches) return false;
       }
 
-      if (filters.localities.isNotEmpty) {
+      if (activeFilters.localities.isNotEmpty) {
         final location = '${hotel.city} ${hotel.locality} ${hotel.state}'.toLowerCase();
-        if (!filters.localities.any((item) => location.contains(item.toLowerCase()))) return false;
+        if (!activeFilters.localities.any((item) => location.contains(item.toLowerCase()))) return false;
       }
 
-      if (filters.amenities.isNotEmpty) {
+      if (activeFilters.amenities.isNotEmpty) {
         final amenities = hotel.amenities.map((item) => item.toLowerCase()).toList();
-        if (!filters.amenities.every(
+        if (!activeFilters.amenities.every(
           (required) => amenities.any((item) => item.contains(required.toLowerCase())),
         )) {
           return false;
         }
       }
 
-      if (filters.deal == 'flash' && hotel.discountPercent < 10) return false;
-      if (filters.deal == 'budget' && price > 3000) return false;
-      if (filters.deal == 'under2k' && price > 2000) return false;
-      if (filters.deal == 'royal' &&
+      if (activeFilters.deal == 'flash' && hotel.discountPercent < 10) return false;
+      if (activeFilters.deal == 'budget' && price > 3000) return false;
+      if (activeFilters.deal == 'under2k' && price > 2000) return false;
+      if (activeFilters.deal == 'royal' &&
           !(price >= 5000 || hotel.starRating >= 5 || hotel.rating >= 4.85)) {
         return false;
       }
@@ -641,7 +642,7 @@ class AppState extends ChangeNotifier {
       return true;
     }).toList();
 
-    switch (filters.sort) {
+    switch (activeFilters.sort) {
       case 'price_low':
         results.sort((a, b) => a.startingPrice.compareTo(b.startingPrice));
         break;
@@ -655,6 +656,8 @@ class AppState extends ChangeNotifier {
 
     return results;
   }
+
+  List<Hotel> get filteredHotels => resultsFor(filters);
 
   // ---------------------------------------------------------------------------
   // Booking helpers
