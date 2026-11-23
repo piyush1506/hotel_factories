@@ -249,7 +249,7 @@ export default function CustomDatePicker({
 
   // Render month calendar grid
   const renderMonth = (year, monthIdx, matrix) => (
-    <div className="custom-calendar-month flex-1 min-w-[280px]">
+    <div className="custom-calendar-month flex-1 min-w-[250px] sm:min-w-[280px]">
       <div className="custom-cal-month-title text-center font-bold text-slate-800 text-sm mb-3">
         {MONTH_NAMES[monthIdx]} {year}
       </div>
@@ -332,7 +332,7 @@ export default function CustomDatePicker({
   );
 
   return (
-    <div className="custom-datepicker-card bg-white rounded-2xl shadow-xl border border-slate-200 p-4 select-none max-w-full" onClick={(e) => e.stopPropagation()}>
+    <div className="custom-datepicker-card bg-white rounded-2xl shadow-xl border border-slate-200 p-3 sm:p-4 select-none max-w-full" onClick={(e) => e.stopPropagation()}>
       {/* Calendar Header with Step Guidance & Month Switchers */}
       <div className="custom-datepicker-head flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
         <div className="datepicker-status-chips flex items-center gap-2 flex-wrap">
@@ -403,7 +403,7 @@ export default function CustomDatePicker({
       </div>
 
       {/* Quick Select Presets Bar */}
-      <div className="custom-datepicker-presets flex items-center gap-2 py-2.5 border-t border-slate-100 flex-wrap text-xs">
+      <div className="custom-datepicker-presets hidden sm:flex items-center gap-2 py-2.5 border-t border-slate-100 flex-wrap text-xs">
         <span className="presets-label text-slate-400 font-semibold mr-1">Quick picks:</span>
         <button
           type="button"
@@ -466,7 +466,7 @@ export default function CustomDatePicker({
           )}
           <button
             type="button"
-            className="cal-apply-btn px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs hover:shadow-md transition-all cursor-pointer"
+            className="cal-apply-btn px-4 py-2 rounded-xl bg-black hover:bg-zinc-800 active:scale-95 text-white text-xs font-bold shadow-xs hover:shadow-md transition-all cursor-pointer"
             onClick={handleApply}
           >
             Apply Dates

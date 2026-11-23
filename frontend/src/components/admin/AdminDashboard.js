@@ -40,7 +40,7 @@ function monthTrend(trends, key) {
   return Math.round(((current - previous) / previous) * 1000) / 10;
 }
 
-export default function AdminDashboard({ metrics, hotels = [], bookings = [], users = [], payoutOverview, coupons = [], reviews = [], asOf, onNavigate, onQuickAction }) {
+export default function AdminDashboard({ metrics, hotels = [], bookings = [], users = [], payoutOverview, coupons = [], reviews = [], asOf, onNavigate, onQuickAction, onOpenScanner }) {
   const financials = metrics?.financials || {};
   const counts = metrics?.counts || {};
   const trends = useMemo(() => metrics?.monthlyTrends || [], [metrics]);
@@ -185,9 +185,10 @@ export default function AdminDashboard({ metrics, hotels = [], bookings = [], us
         description="Here is how Hotel Factories is performing across properties, bookings and settlements."
         actions={
           <>
+            <PrimaryButton icon="fa-camera" onClick={onOpenScanner}>Scan QR Pass</PrimaryButton>
             <GhostButton icon="fa-chart-line" onClick={() => onNavigate('reports')}>View reports</GhostButton>
             <GhostButton icon="fa-file-arrow-down" onClick={exportReport}>Export report</GhostButton>
-            <PrimaryButton icon="fa-plus" onClick={() => onQuickAction('property')}>Add property</PrimaryButton>
+            <GhostButton icon="fa-plus" onClick={() => onQuickAction('property')}>Add property</GhostButton>
           </>
         }
         meta={

@@ -4,51 +4,61 @@ import React, { useState, useEffect } from 'react';
 
 const PRESET_OPTIONS = [
   {
-    id: '2 Adults (1 Room)',
-    label: '2 Adults (1 Room)',
+    id: '1 Male, 1 Female (1 Room)',
+    label: '1 Male, 1 Female (1 Room)',
     sub: 'Most popular for couples & leisure',
     badge: 'Couple',
     icon: 'fa-solid fa-user-group',
+    adultsMale: 1,
+    adultsFemale: 1,
     adults: 2,
     children: 0,
     rooms: 1
   },
   {
-    id: '1 Adult (1 Room)',
-    label: '1 Adult (1 Room)',
-    sub: 'Single business or solo traveler',
-    badge: 'Solo',
-    icon: 'fa-solid fa-user',
+    id: '1 Male (1 Room)',
+    label: '1 Male (1 Room)',
+    sub: 'Solo business or male leisure traveler',
+    badge: 'Solo Male',
+    icon: 'fa-solid fa-person',
+    adultsMale: 1,
+    adultsFemale: 0,
     adults: 1,
     children: 0,
     rooms: 1
   },
   {
-    id: '2 Adults, 1 Child (1 Room)',
-    label: '2 Adults, 1 Child (1 Room)',
-    sub: 'Family holiday with child (0-11 yrs)',
-    badge: 'Family',
-    icon: 'fa-solid fa-people-roof',
-    adults: 2,
-    children: 1,
+    id: '1 Female (1 Room)',
+    label: '1 Female (1 Room)',
+    sub: 'Solo female business or holiday traveler',
+    badge: 'Solo Female',
+    icon: 'fa-solid fa-person-dress',
+    adultsMale: 0,
+    adultsFemale: 1,
+    adults: 1,
+    children: 0,
     rooms: 1
   },
   {
-    id: '3 Adults (1 Room)',
-    label: '3 Adults (1 Room)',
+    id: '2 Male, 1 Female (1 Room)',
+    label: '2 Male, 1 Female (1 Room)',
     sub: 'Triple occupancy with extra bedding',
     badge: 'Triple',
     icon: 'fa-solid fa-users',
+    adultsMale: 2,
+    adultsFemale: 1,
     adults: 3,
     children: 0,
     rooms: 1
   },
   {
-    id: '4 Adults (2 Rooms)',
-    label: '4 Adults (2 Rooms)',
+    id: '2 Male, 2 Female (2 Rooms)',
+    label: '2 Male, 2 Female (2 Rooms)',
     sub: 'Multi-room family or friends group',
     badge: 'Group',
     icon: 'fa-solid fa-door-open',
+    adultsMale: 2,
+    adultsFemale: 2,
     adults: 4,
     children: 0,
     rooms: 2
@@ -56,16 +66,25 @@ const PRESET_OPTIONS = [
 ];
 
 export default function CustomGuestPicker({
-  value = '2 Adults (1 Room)',
+  value = '1 Male, 1 Female (1 Room)',
   onChange,
   isOpen = false,
   onToggle,
   onClose
 }) {
   // Parse initial counts from value
-  const [adults, setAdults] = useState(() => {
-    const match = String(value).match(/(\d+)\s*Adult/i);
-    return match ? Number(match[1]) : 2;
+  const [adultsMale, setAdultsMale] = useState(() => {
+    const mMatch = String(value).match(/(\d+)\s*Male/i);
+    if (mMatch) return Number(mMatch[1]);
+    const aMatch = String(value).match(/(\d+)\s*Adult/i);
+    return aMatch ? Math.ceil(Number(aMatch[1]) / 2) : 1;
+  });
+
+  const [adultsFemale, setAdultsFemale] = useState(() => {
+    const fMatch = String(value).match(/(\d+)\s*Female/i);
+    if (fMatch) return Number(fMatch[1]);
+    const aMatch = String(value).match(/(\d+)\s*Adult/i);
+    return aMatch ? Math.floor(Number(aMatch[1]) / 2) : 1;
   });
 
   const [childrenCount, setChildrenCount] = useState(() => {
@@ -82,40 +101,76 @@ export default function CustomGuestPicker({
 
   // Sync internal state when external value changes
   useEffect(() => {
+    const mMatch = String(value).match(/(\d+)\s*Male/i);
+    const fMatch = String(value).match(/(\d+)\s*Female/i);
     const aMatch = String(value).match(/(\d+)\s*Adult/i);
     const cMatch = String(value).match(/(\d+)\s*Child/i);
     const rMatch = String(value).match(/(\d+)\s*Room/i);
-    if (aMatch) setAdults(Number(aMatch[1]));
+
+    if (mMatch) setAdultsMale(Number(mMatch[1]));
+    else if (aMatch) setAdultsMale(Math.ceil(Number(aMatch[1]) / 2));
+
+    if (fMatch) setAdultsFemale(Number(fMatch[1]));
+    else if (aMatch) setAdultsFemale(Math.floor(Number(aMatch[1]) / 2));
+
     if (cMatch) setChildrenCount(Number(cMatch[1]));
     if (rMatch) setRooms(Number(rMatch[1]));
   }, [value]);
 
-  const computeConfigString = (a, c, r) => {
-    const adultStr = `${a} ${a === 1 ? 'Adult' : 'Adults'}`;
+  const computeConfigString = (m, f, c, r) => {
+    const guestsParts = [];
+    if (m > 0) guestsParts.push(`${m} Male`);
+    if (f > 0) guestsParts.push(`${f} Female`);
+    if (guestsParts.length === 0) guestsParts.push('1 Adult');
+    const guestStr = guestsParts.join(', ');
     const childStr = c > 0 ? `, ${c} ${c === 1 ? 'Child' : 'Children'}` : '';
     const roomStr = ` (${r} ${r === 1 ? 'Room' : 'Rooms'})`;
-    return `${adultStr}${childStr}${roomStr}`;
+    return `${guestStr}${childStr}${roomStr}`;
   };
 
   const handleSelectPreset = (preset) => {
-    setAdults(preset.adults);
+    setAdultsMale(preset.adultsMale);
+    setAdultsFemale(preset.adultsFemale);
     setChildrenCount(preset.children);
     setRooms(preset.rooms);
-    if (onChange) onChange(preset.id);
+    if (onChange) {
+      onChange({
+        id: preset.id,
+        adults: preset.adults,
+        adultsMale: preset.adultsMale,
+        adultsFemale: preset.adultsFemale,
+        children: preset.children,
+        rooms: preset.rooms,
+        text: preset.id
+      });
+    }
     if (onClose) onClose();
   };
 
-  const handleUpdateSteppers = (newA, newC, newR) => {
-    setAdults(newA);
+  const handleUpdateSteppers = (newM, newF, newC, newR) => {
+    setAdultsMale(newM);
+    setAdultsFemale(newF);
     setChildrenCount(newC);
     setRooms(newR);
-    const newStr = computeConfigString(newA, newC, newR);
-    if (onChange) onChange(newStr);
+    const newStr = computeConfigString(newM, newF, newC, newR);
+    if (onChange) {
+      onChange({
+        id: newStr,
+        adults: newM + newF,
+        adultsMale: newM,
+        adultsFemale: newF,
+        children: newC,
+        rooms: newR,
+        text: newStr
+      });
+    }
   };
+
+  const totalAdults = adultsMale + adultsFemale;
 
   return (
     <div className="custom-guest-picker-container relative w-full">
-      {/* Trigger Card (replacing raw HTML select) */}
+      {/* Trigger Card */}
       <div
         className={`custom-guest-trigger flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-white cursor-pointer hover:border-blue-400 transition-all shadow-2xs ${isOpen ? 'is-open ring-2 ring-blue-500/20 border-blue-500' : ''}`}
         onClick={onToggle}
@@ -129,7 +184,9 @@ export default function CustomGuestPicker({
           </div>
           <div className="guest-trigger-info text-left">
             <span className="guest-trigger-label block text-[10px] font-bold text-slate-400 uppercase tracking-wider">GUESTS &amp; ROOMS</span>
-            <strong className="guest-trigger-value block text-sm font-bold text-slate-800">{value || `${adults} ${adults === 1 ? 'Adult' : 'Adults'} (${rooms} ${rooms === 1 ? 'Room' : 'Rooms'})`}</strong>
+            <strong className="guest-trigger-value block text-sm font-bold text-slate-800">
+              {value || `${adultsMale} Male, ${adultsFemale} Female (${rooms} Room)`}
+            </strong>
           </div>
         </div>
 
@@ -140,11 +197,11 @@ export default function CustomGuestPicker({
 
       {/* Floating Popover Panel */}
       {isOpen && (
-        <div className="custom-guest-dropdown-card absolute top-full left-0 right-0 mt-2 z-50 bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="custom-guest-dropdown-card absolute top-full left-0 right-0 mt-2 z-50 bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
           <div className="guest-dropdown-header flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
               <h4 className="font-bold text-slate-900 text-sm">Guests &amp; Rooms Configuration</h4>
-              <p className="text-xs text-slate-500 mt-0.5">Select a quick stay option or customize exact counts</p>
+              <p className="text-xs text-slate-500 mt-0.5">Adults split into Male &amp; Female for clear stay planning</p>
             </div>
             {onClose && (
               <button
@@ -161,7 +218,7 @@ export default function CustomGuestPicker({
           {/* Quick Presets List */}
           <div className="guest-presets-stack py-3 space-y-2">
             {PRESET_OPTIONS.map((opt) => {
-              const isSelected = value === opt.id;
+              const isSelected = value === opt.id || (adultsMale === opt.adultsMale && adultsFemale === opt.adultsFemale && rooms === opt.rooms && childrenCount === opt.children);
               return (
                 <div
                   key={opt.id}
@@ -193,7 +250,7 @@ export default function CustomGuestPicker({
               className="toggle-steppers-btn w-full py-2 px-3 rounded-lg text-xs font-semibold text-emerald-600 hover:bg-emerald-50 flex items-center justify-between transition-colors"
               onClick={() => setShowSteppers(!showSteppers)}
             >
-              <span>{showSteppers ? 'Hide Custom Steppers' : '+ Customize Exact Counts (Adults, Kids, Rooms)'}</span>
+              <span>{showSteppers ? 'Hide Custom Steppers' : '+ Customize Exact Counts (Male, Female, Kids, Rooms)'}</span>
               <i className={`fa-solid fa-chevron-${showSteppers ? 'up' : 'down'} text-[10px]`} />
             </button>
           </div>
@@ -212,7 +269,7 @@ export default function CustomGuestPicker({
                     type="button"
                     className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 flex items-center justify-center transition-all"
                     disabled={rooms <= 1}
-                    onClick={() => handleUpdateSteppers(adults, childrenCount, Math.max(1, rooms - 1))}
+                    onClick={() => handleUpdateSteppers(adultsMale, adultsFemale, childrenCount, Math.max(1, rooms - 1))}
                   >
                     &minus;
                   </button>
@@ -221,34 +278,77 @@ export default function CustomGuestPicker({
                     type="button"
                     className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 flex items-center justify-center transition-all"
                     disabled={rooms >= 5}
-                    onClick={() => handleUpdateSteppers(adults, childrenCount, Math.min(5, rooms + 1))}
+                    onClick={() => handleUpdateSteppers(adultsMale, adultsFemale, childrenCount, Math.min(5, rooms + 1))}
                   >
                     &#43;
                   </button>
                 </div>
               </div>
 
-              {/* Adults Counter */}
+              {/* Adults (Male) Counter */}
               <div className="stepper-row flex items-center justify-between">
                 <div>
-                  <strong className="block text-xs font-bold text-slate-800">Adults</strong>
+                  <strong className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <i className="fa-solid fa-person text-sky-600 text-xs" />
+                    <span>Adult (Male)</span>
+                  </strong>
                   <small className="block text-[10px] text-slate-400">Age 12+ years</small>
                 </div>
                 <div className="stepper-controls flex items-center gap-2">
                   <button
                     type="button"
                     className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 flex items-center justify-center transition-all"
-                    disabled={adults <= 1}
-                    onClick={() => handleUpdateSteppers(Math.max(1, adults - 1), childrenCount, rooms)}
+                    disabled={adultsMale <= 0 || (adultsMale === 1 && adultsFemale === 0)}
+                    onClick={() => {
+                      const nextM = Math.max(0, adultsMale - 1);
+                      if (nextM + adultsFemale >= 1) {
+                        handleUpdateSteppers(nextM, adultsFemale, childrenCount, rooms);
+                      }
+                    }}
                   >
                     &minus;
                   </button>
-                  <span className="stepper-count w-6 text-center text-xs font-bold text-slate-800">{adults}</span>
+                  <span className="stepper-count w-6 text-center text-xs font-bold text-slate-800">{adultsMale}</span>
                   <button
                     type="button"
                     className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 flex items-center justify-center transition-all"
-                    disabled={adults >= 10}
-                    onClick={() => handleUpdateSteppers(Math.min(10, adults + 1), childrenCount, rooms)}
+                    disabled={adultsMale >= 8}
+                    onClick={() => handleUpdateSteppers(adultsMale + 1, adultsFemale, childrenCount, rooms)}
+                  >
+                    &#43;
+                  </button>
+                </div>
+              </div>
+
+              {/* Adults (Female) Counter */}
+              <div className="stepper-row flex items-center justify-between">
+                <div>
+                  <strong className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <i className="fa-solid fa-person-dress text-pink-600 text-xs" />
+                    <span>Adult (Female)</span>
+                  </strong>
+                  <small className="block text-[10px] text-slate-400">Age 12+ years</small>
+                </div>
+                <div className="stepper-controls flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 flex items-center justify-center transition-all"
+                    disabled={adultsFemale <= 0 || (adultsFemale === 1 && adultsMale === 0)}
+                    onClick={() => {
+                      const nextF = Math.max(0, adultsFemale - 1);
+                      if (adultsMale + nextF >= 1) {
+                        handleUpdateSteppers(adultsMale, nextF, childrenCount, rooms);
+                      }
+                    }}
+                  >
+                    &minus;
+                  </button>
+                  <span className="stepper-count w-6 text-center text-xs font-bold text-slate-800">{adultsFemale}</span>
+                  <button
+                    type="button"
+                    className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 flex items-center justify-center transition-all"
+                    disabled={adultsFemale >= 8}
+                    onClick={() => handleUpdateSteppers(adultsMale, adultsFemale + 1, childrenCount, rooms)}
                   >
                     &#43;
                   </button>
@@ -266,7 +366,7 @@ export default function CustomGuestPicker({
                     type="button"
                     className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 flex items-center justify-center transition-all"
                     disabled={childrenCount <= 0}
-                    onClick={() => handleUpdateSteppers(adults, Math.max(0, childrenCount - 1), rooms)}
+                    onClick={() => handleUpdateSteppers(adultsMale, adultsFemale, Math.max(0, childrenCount - 1), rooms)}
                   >
                     &minus;
                   </button>
@@ -275,7 +375,7 @@ export default function CustomGuestPicker({
                     type="button"
                     className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 flex items-center justify-center transition-all"
                     disabled={childrenCount >= 6}
-                    onClick={() => handleUpdateSteppers(adults, Math.min(6, childrenCount + 1), rooms)}
+                    onClick={() => handleUpdateSteppers(adultsMale, adultsFemale, Math.min(6, childrenCount + 1), rooms)}
                   >
                     &#43;
                   </button>
@@ -288,11 +388,11 @@ export default function CustomGuestPicker({
           <div className="guest-dropdown-footer flex items-center justify-between pt-3 border-t border-slate-100 gap-2">
             <div className="current-summary flex items-center gap-1.5 text-xs text-slate-600 font-semibold truncate">
               <i className="fa-solid fa-circle-check text-emerald-600" />
-              <span className="truncate">{value}</span>
+              <span className="truncate">{adultsMale} Male, {adultsFemale} Female ({rooms} Room)</span>
             </div>
             <button
               type="button"
-              className="guest-apply-btn px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs hover:shadow-md transition-all shrink-0"
+              className="guest-apply-btn px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs hover:shadow-md transition-all shrink-0 cursor-pointer"
               onClick={onClose}
             >
               Apply Selection

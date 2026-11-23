@@ -10,7 +10,7 @@ const alertTone = {
   emerald: 'bg-slate-100 text-slate-500'
 };
 
-export default function AdminTopbar({ title, description, user, onMenu, onRefresh, loading, onExit, onLogout, alerts = [], onNavigate, onSearch }) {
+export default function AdminTopbar({ title, description, user, onMenu, onRefresh, loading, onExit, onLogout, alerts = [], onNavigate, onSearch, onOpenScanner }) {
   const [panel, setPanel] = useState(null);
   const alertCount = alerts.reduce((total, alert) => total + (Number(alert.count) || 0), 0);
 
@@ -41,6 +41,17 @@ export default function AdminTopbar({ title, description, user, onMenu, onRefres
             <i className="fa-regular fa-calendar text-slate-400" aria-hidden="true" />
             {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
           </div>
+
+          <button
+            type="button"
+            onClick={onOpenScanner}
+            title="Scan Guest Pass with Camera"
+            aria-label="Scan Guest Pass with Camera"
+            className="flex h-9 items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-2.5 text-xs font-semibold text-sky-700 shadow-sm transition hover:border-sky-300 hover:bg-sky-100 active:scale-[0.98]"
+          >
+            <i className="fa-solid fa-camera text-sky-600" aria-hidden="true" />
+            <span className="hidden sm:inline">Scan QR</span>
+          </button>
 
           <button
             type="button"

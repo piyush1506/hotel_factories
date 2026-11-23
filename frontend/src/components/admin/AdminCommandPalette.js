@@ -53,8 +53,26 @@ function buildResults({ query, hotels, bookings, users, coupons, reviews, recent
     }))
   ).filter((item) => matches([item.title, item.subtitle, item.meta], cleanQuery));
 
+  const quickActions = [
+    {
+      key: 'action-scan-camera',
+      group: 'Actions',
+      type: 'action',
+      icon: 'fa-camera',
+      title: 'Scan QR Pass with Camera',
+      subtitle: 'Open live camera scanner to verify guest pass or check in',
+      meta: 'Front Desk',
+      action: 'scan-qr',
+      tab: 'bookings'
+    }
+  ].filter((item) => !cleanQuery || matches([item.title, item.subtitle, item.meta, 'camera qr scanner pass checkin'], cleanQuery));
+
   if (!cleanQuery && recents.length > 0) {
     groups.push({ label: 'Recent', items: recents.slice(0, MAX_RECENTS) });
+  }
+
+  if (quickActions.length > 0) {
+    groups.push({ label: 'Front Desk Actions', items: quickActions });
   }
 
   if (navResults.length > 0) {

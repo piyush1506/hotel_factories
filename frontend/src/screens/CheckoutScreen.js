@@ -70,13 +70,11 @@ export default function CheckoutScreen() {
     }
   }, [user]);
 
-  // Dynamic Room preferences state
-  const [beddingType, setBeddingType] = useState(room?.bedType || '1 King Bed');
-  const smokingPolicy = room?.smokingPolicy || hotel?.policies?.smoking || '100% Non-Smoking';
-  const defaultEstCheckIn = hotel?.checkInTime ? `${hotel.checkInTime} – ${parseInt(hotel.checkInTime) + 1 || 15}:00` : '14:00 – 15:00';
-  const [estCheckIn, setEstCheckIn] = useState(defaultEstCheckIn);
+  // Special requests
   const [specialRequests, setSpecialRequests] = useState('');
 
+  // Dynamic Payment Support from Hotel / Room policies
+  const allowsPayAtHotel = hotel?.allowPayAtHotel !== false && room?.allowPayAtHotel !== false;
   // Payment method state ('razorpay' | 'hotel')
   const [paymentTab, setPaymentTab] = useState('razorpay');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -130,7 +128,7 @@ export default function CheckoutScreen() {
   const discount = quote ? Number(quote.discountAmount || 0) : 0;
   const convenienceFee = quote ? Number(quote.platformConvenienceFee ?? quote.convenienceFee ?? 0) : 0;
   const totalPrice = quote ? Number(quote.totalPayableByCustomer ?? quote.finalAmount ?? Math.max(0, basePrice + taxes + convenienceFee - discount)) : Math.max(0, Number((basePrice + taxes + convenienceFee - discount).toFixed(2)));
-  const rewardPoints = Math.max(50, Math.round(totalPrice * 0.05));
+  const finalPayableAmount = totalPrice;
 
   const handleApplyCoupon = (e) => {
     if (e) e.preventDefault();
@@ -154,11 +152,7 @@ export default function CheckoutScreen() {
 
     setIsSubmitting(true);
     try {
-      const combinedSpecialRequests = [
-        beddingType ? `Bed: ${beddingType}` : '',
-        estCheckIn ? `Est Arrival: ${estCheckIn}` : '',
-        specialRequests.trim()
-      ].filter(Boolean).join(' · ');
+      const combinedSpecialRequests = specialRequests.trim();
 
       const bookingPayload = {
         roomId: room.id,
@@ -168,7 +162,12 @@ export default function CheckoutScreen() {
         guestName: `${firstName.trim()} ${lastName.trim()}`,
         guestEmail: email.trim(),
         guestPhone: phone.trim() ? `${countryCode} ${phone.trim()}` : (user?.phone || ''),
-        guestCount: Number(searchParams?.adults || 2),
+        guestCount: {
+          adults: Number(searchParams?.adults || 2),
+          adultsMale: Number(searchParams?.adultsMale !== undefined ? searchParams.adultsMale : 1),
+          adultsFemale: Number(searchParams?.adultsFemale !== undefined ? searchParams.adultsFemale : 1),
+          children: Number(searchParams?.childrenCount || 0)
+        },
         specialRequest: combinedSpecialRequests,
         paymentMode: paymentTab === 'hotel' ? 'hotel' : 'razorpay',
         couponCode: promoCode ? promoCode.trim().toUpperCase() : undefined,
@@ -208,33 +207,8 @@ export default function CheckoutScreen() {
       {/* Main Container */}
       <div className="max-w-[1440px] mx-auto px-4 sm:px-8 pt-6">
         
-        {/* Dynamic Top Banner */}
-        {user ? (
-          <div className="p-4 rounded-2xl bg-[#00224f] text-white flex items-center justify-between gap-4 mb-6 shadow-sm flex-wrap sm:flex-nowrap">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-base shrink-0">
-                <i className="fa-solid fa-circle-user" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs sm:text-sm font-bold">
-                    Signed in as <span className="text-amber-400">{user.name || user.email}</span>
-                  </span>
-                  <span className="text-[11px] text-blue-200">
-                    · {user.role === 'admin' ? 'Administrator' : 'Hotel Factories Member'}
-                  </span>
-                </div>
-                <span className="block text-[11px] text-slate-300 mt-0.5">
-                  You will earn <strong className="text-white">{rewardPoints} Reward Points</strong> on this stay!
-                </span>
-              </div>
-            </div>
-
-            <span className="px-3 py-1 rounded-md bg-amber-500 text-slate-950 font-black text-[10px] tracking-wider uppercase shrink-0">
-              MEMBER TARIFF
-            </span>
-          </div>
-        ) : (
+        {/* Account Alert for Guests */}
+        {!user && (
           <div className="p-4 rounded-2xl bg-slate-900 text-white flex items-center justify-between gap-4 mb-6 shadow-sm flex-wrap sm:flex-nowrap">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-300 flex items-center justify-center text-base shrink-0">
@@ -261,22 +235,65 @@ export default function CheckoutScreen() {
           </div>
         )}
 
-        {/* Mobile Quick Booking Summary Bar (Visible only on < lg mobile devices) */}
-        <div className="lg:hidden mb-5 p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
+        {/* Mobile Booking Summary Card (Shown at the very top on mobile so hotel & room are seen first) */}
+        <div className="lg:hidden mb-6 p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-3">
+          <div className="flex gap-3.5 items-start">
+            <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-slate-100 shrink-0">
+              <img
+                src={hotelImage}
+                alt={hotel.name}
+                className="w-full h-full object-cover"
+              />
+              {(hotel.starRating || hotel.stars || hotel.category) && (
+                <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-amber-500 text-slate-950 font-black text-[8px] uppercase">
+                  {hotel.starRating ? `${hotel.starRating}-Star` : (hotel.category || 'Luxury')}
+                </span>
+              )}
+            </div>
+
+            <div className="flex-1 min-w-0">
               <span className="text-[10px] font-extrabold uppercase tracking-wider text-sky-600 block mb-0.5">
-                Your Selection
+                Your Reservation
               </span>
-              <h3 className="font-bold text-sm text-slate-900 truncate">{hotel.name}</h3>
-              <p className="text-xs text-slate-500 mt-0.5 truncate">
-                {room.name} · {nights} {nights === 1 ? 'Night' : 'Nights'}
+              <h3 className="font-bold text-sm text-slate-900 leading-snug truncate">
+                {hotel.name}
+              </h3>
+              <p className="text-xs text-slate-500 truncate mt-0.5">
+                <i className="fa-solid fa-location-dot text-slate-400 mr-1 text-[10px]" />
+                {[hotel.locality, hotel.city].filter(Boolean).join(', ') || hotel.address || 'India'}
               </p>
+              <div className="flex items-center gap-1.5 mt-1.5">
+                {hotel.rating && (
+                  <span className="px-1.5 py-0.2 rounded bg-slate-900 text-white text-[10px] font-black">
+                    ★ {Number(hotel.rating).toFixed(1)}
+                  </span>
+                )}
+                <span className="text-xs font-semibold text-slate-700">
+                  {hotel.scoreLabel || 'Top Rated Stay'}
+                </span>
+              </div>
             </div>
-            <div className="text-right shrink-0 bg-slate-50 border border-slate-100 px-3 py-2 rounded-xl">
-              <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">TOTAL</span>
-              <span className="text-base font-black text-slate-900">{formatPrice(finalPayableAmount)}</span>
+          </div>
+
+          {/* Dates & Room Strip on Mobile */}
+          <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-100 grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <span className="block text-[10px] font-bold text-slate-400 uppercase">CHECK-IN</span>
+              <strong className="block text-xs font-bold text-slate-900 truncate">{formatDate(checkInDate)}</strong>
+              <span className="text-[10px] text-slate-500">From {hotel.checkInTime || '14:00'}</span>
             </div>
+            <div>
+              <span className="block text-[10px] font-bold text-slate-400 uppercase">CHECK-OUT</span>
+              <strong className="block text-xs font-bold text-slate-900 truncate">{formatDate(checkOutDate)}</strong>
+              <span className="text-[10px] text-slate-500">Until {hotel.checkOutTime || '11:00'}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-xs font-bold text-slate-700 pt-1">
+            <span className="truncate text-slate-900">{room.name}</span>
+            <span className="text-slate-500 font-semibold shrink-0">
+              {nights} {nights === 1 ? 'Night' : 'Nights'} · {roomsCount} {roomsCount === 1 ? 'Room' : 'Rooms'}
+            </span>
           </div>
         </div>
 
@@ -407,76 +424,25 @@ export default function CheckoutScreen() {
               </div>
             </div>
 
-            {/* 2. Room Preferences & Arrival */}
-            <div className="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
-              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 mb-4">
-                <i className="fa-solid fa-sliders text-[#003b95]" />
-                <span>Room Preferences &amp; Arrival</span>
-              </h2>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-                <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs">
-                  <label htmlFor="bedding-select" className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
-                    Bedding Type
-                  </label>
-                  <select
-                    id="bedding-select"
-                    value={beddingType}
-                    onChange={(e) => setBeddingType(e.target.value)}
-                    className="w-full bg-transparent font-bold text-slate-800 outline-none cursor-pointer"
-                  >
-                    <option value={room?.bedType || '1 King Bed'}>{room?.bedType || '1 Large King Bed'}</option>
-                    <option value="2 Twin / Single Beds">2 Twin / Single Beds</option>
-                  </select>
-                </div>
-
-                <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs">
-                  <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Smoking Policy</span>
-                  <div className="flex items-center gap-1.5 font-bold text-slate-800 pt-1">
-                    <i className="fa-solid fa-ban-smoking text-emerald-600" />
-                    <span className="truncate">{smokingPolicy}</span>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs">
-                  <label htmlFor="checkin-time-select" className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
-                    Est. Check-in
-                  </label>
-                  <select
-                    id="checkin-time-select"
-                    value={estCheckIn}
-                    onChange={(e) => setEstCheckIn(e.target.value)}
-                    className="w-full bg-transparent font-bold text-slate-800 outline-none cursor-pointer"
-                  >
-                    <option value={defaultEstCheckIn}>{defaultEstCheckIn}</option>
-                    <option value="15:00 – 16:00">15:00 – 16:00</option>
-                    <option value="16:00 – 17:00">16:00 – 17:00</option>
-                    <option value="17:00 – 18:00">17:00 – 18:00</option>
-                    <option value="After 18:00 (Late Arrival)">After 18:00 (Late Arrival)</option>
-                    <option value="I am not sure yet">I am not sure yet</option>
-                  </select>
-                </div>
+            {/* 2. Special Requests (Optional) */}
+            <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <i className="fa-regular fa-comment-dots text-slate-500" />
+                  <span>Special Requests</span>
+                </label>
+                <span className="text-[10px] font-bold text-slate-400 uppercase">OPTIONAL</span>
               </div>
-
-              {/* Special Requests */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Special requests
-                  </label>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">OPTIONAL</span>
-                </div>
-                <textarea
-                  rows={3}
-                  value={specialRequests}
-                  onChange={(e) => setSpecialRequests(e.target.value)}
-                  placeholder="e.g. Quiet corner, high floor, early luggage drop, celebration note..."
-                  className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50/50 text-xs text-slate-800 outline-none focus:border-[#003b95] focus:bg-white transition-all resize-none"
-                />
-                <span className="block text-[10px] text-slate-400 mt-1">
-                  Special requests are relayed directly to the hotel reception and fulfilled subject to availability.
-                </span>
-              </div>
+              <textarea
+                rows={2}
+                value={specialRequests}
+                onChange={(e) => setSpecialRequests(e.target.value)}
+                placeholder="e.g. Quiet room, high floor, early luggage drop, celebration note..."
+                className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50/50 text-xs text-slate-800 outline-none focus:border-[#003b95] focus:bg-white transition-all resize-none"
+              />
+              <span className="block text-[10px] text-slate-400 mt-1">
+                Special requests are relayed directly to hotel reception and fulfilled subject to availability.
+              </span>
             </div>
 
             {/* 3. Promo Code Section */}
@@ -543,111 +509,198 @@ export default function CheckoutScreen() {
             </div>
 
             {/* 4. Payment Method */}
-            <div className="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
+            <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
               <div className="flex items-center justify-between mb-1">
                 <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <i className="fa-solid fa-shield-halved text-[#00224f]" />
+                  <i className="fa-solid fa-shield-halved text-slate-900" />
                   <span>Payment Method</span>
                 </h2>
               </div>
-              <p className="text-xs text-slate-500 mb-5">
-                Pay online instantly through Razorpay or choose to pay at the hotel desk upon check-in.
+              <p className="text-xs text-slate-500 mb-4">
+                {allowsPayAtHotel 
+                  ? 'Pay securely online or choose to pay at the hotel desk upon check-in.' 
+                  : 'This property requires guaranteed online prepayment.'}
               </p>
 
-              {/* Payment Method Selector Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
-                {/* Razorpay Online */}
+              {/* Payment Method Selector Cards - Reduced Size, Clean & No Third Parties */}
+              <div className={`grid grid-cols-1 ${allowsPayAtHotel ? 'sm:grid-cols-2' : ''} gap-2.5 mb-3`}>
+                {/* Pay Online */}
                 <button
                   type="button"
                   onClick={() => setPaymentTab('razorpay')}
-                  className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative ${
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${
                     paymentTab === 'razorpay'
-                      ? 'border-[#00224f] bg-slate-50/80 ring-2 ring-[#00224f]/10 shadow-xs'
+                      ? 'border-slate-900 bg-slate-50/90 ring-1 ring-slate-900/10 shadow-2xs'
                       : 'border-slate-200 hover:border-slate-300 bg-white'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#00224f]">
-                      <span className="w-2 h-2 rounded-full bg-blue-600" />
-                      Razorpay Gateway
-                    </span>
-                    <span className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                      paymentTab === 'razorpay' ? 'border-[#00224f] bg-[#00224f]' : 'border-slate-300'
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                      paymentTab === 'razorpay' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'
                     }`}>
-                      {paymentTab === 'razorpay' && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
-                    </span>
+                      <i className="fa-regular fa-credit-card text-xs" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-slate-900 leading-tight">Pay Online</div>
+                      <div className="text-[11px] text-slate-500 truncate">UPI, Cards &amp; NetBanking</div>
+                    </div>
                   </div>
-                  <div className="text-sm font-bold text-slate-900">UPI, Cards &amp; NetBanking</div>
-                  <div className="text-xs text-slate-500 mt-1">Google Pay, PhonePe, Paytm, Visa, RuPay, NetBanking</div>
-                  <div className="mt-3 flex items-center gap-1.5 flex-wrap">
-                    <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-xs font-bold text-slate-700">UPI</span>
-                    <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-xs font-bold text-slate-700">GPay</span>
-                    <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-xs font-bold text-slate-700">PhonePe</span>
-                    <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-xs font-bold text-slate-700">Cards</span>
-                    <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-xs font-bold text-slate-700">NetBanking</span>
-                  </div>
+                  <span className={`w-4 h-4 rounded-full border shrink-0 flex items-center justify-center ${
+                    paymentTab === 'razorpay' ? 'border-slate-900 bg-slate-900' : 'border-slate-300'
+                  }`}>
+                    {paymentTab === 'razorpay' && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </span>
                 </button>
 
-                {/* Pay at Hotel */}
-                <button
-                  type="button"
-                  onClick={() => setPaymentTab('hotel')}
-                  className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative ${
-                    paymentTab === 'hotel'
-                      ? 'border-[#00224f] bg-slate-50/80 ring-2 ring-[#00224f]/10 shadow-xs'
-                      : 'border-slate-200 hover:border-slate-300 bg-white'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700">
-                      <i className="fa-solid fa-hotel text-slate-500" />
-                      Pay at Property
-                    </span>
-                    <span className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                      paymentTab === 'hotel' ? 'border-[#00224f] bg-[#00224f]' : 'border-slate-300'
+                {/* Pay at Hotel (Only shown when property allows it) */}
+                {allowsPayAtHotel && (
+                  <button
+                    type="button"
+                    onClick={() => setPaymentTab('hotel')}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                      paymentTab === 'hotel'
+                        ? 'border-slate-900 bg-slate-50/90 ring-1 ring-slate-900/10 shadow-2xs'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                        paymentTab === 'hotel' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'
+                      }`}>
+                        <i className="fa-solid fa-hotel text-xs" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-slate-900 leading-tight">Pay at Hotel</div>
+                        <div className="text-[11px] text-slate-500 truncate">Pay on Check-in</div>
+                      </div>
+                    </div>
+                    <span className={`w-4 h-4 rounded-full border shrink-0 flex items-center justify-center ${
+                      paymentTab === 'hotel' ? 'border-slate-900 bg-slate-900' : 'border-slate-300'
                     }`}>
                       {paymentTab === 'hotel' && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
                     </span>
-                  </div>
-                  <div className="text-sm font-bold text-slate-900">Pay on Check-in</div>
-                  <div className="text-xs text-slate-500 mt-1">Cash, Card or UPI directly at hotel reception</div>
-                  <div className="mt-3 flex items-center gap-1 text-xs font-semibold text-emerald-600">
-                    <i className="fa-solid fa-circle-check" /> No upfront online payment required
-                  </div>
-                </button>
+                  </button>
+                )}
               </div>
 
               {/* Informational banner for Pay at Hotel */}
-              {paymentTab === 'hotel' && (
-                <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-200/80 mb-6 flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0 text-sm">
-                    <i className="fa-solid fa-info" />
-                  </div>
-                  <div className="text-xs leading-relaxed text-amber-900">
-                    <p className="font-bold text-amber-950 mb-0.5">Pay upon arrival at reception</p>
-                    <p>Your room will be reserved. Please present your government ID and pay the total tariff at the hotel desk during check-in.</p>
-                  </div>
+              {allowsPayAtHotel && paymentTab === 'hotel' && (
+                <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200/80 mb-4 flex items-start gap-2.5 text-xs text-amber-900">
+                  <i className="fa-solid fa-circle-info text-amber-600 mt-0.5 shrink-0" />
+                  <p className="leading-relaxed">
+                    <strong>Pay on arrival:</strong> Your reservation is guaranteed. Please pay the total amount at the hotel reception during check-in.
+                  </p>
                 </div>
               )}
 
-              {/* Complete Booking CTA Button */}
+            </div>
+
+            {/* Mobile-Only Review & Pay Section (Placed at the very last on mobile so hotel & room are reviewed first) */}
+            <div className="lg:hidden p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h4 className="font-bold text-slate-900 text-sm">Review &amp; Pay</h4>
+                <span className="text-xs text-slate-500 font-medium">Final Step</span>
+              </div>
+
+              {/* Dynamic Property & Room Cancellation Policy on Mobile */}
+              {(() => {
+                const activePolicy = room?.cancellationPolicy || hotel?.cancellationPolicy;
+                const isRefundable = activePolicy?.refundable !== false && String(activePolicy?.type || '').toUpperCase() !== 'NON_REFUNDABLE';
+                const windowHours = Number(activePolicy?.windowHours) || 24;
+
+                let deadlineStr = '';
+                if (isRefundable && checkInDate) {
+                  try {
+                    const checkInTime = new Date(`${checkInDate}T14:00:00`);
+                    const cutoff = new Date(checkInTime.getTime() - windowHours * 60 * 60 * 1000);
+                    deadlineStr = cutoff.toLocaleDateString('en-IN', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    });
+                  } catch (_) {}
+                }
+
+                if (isRefundable) {
+                  return (
+                    <div className="p-3 rounded-xl bg-sky-50 border border-sky-100 text-xs text-sky-950 flex items-start gap-2.5">
+                      <i className="fa-solid fa-clock-rotate-left text-[#0ea5e9] text-sm shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="block font-bold text-sky-900">
+                          Cancellation Policy: {activePolicy?.badgeText || `Free Cancellation (${windowHours}h)`}
+                        </strong>
+                        <span className="text-sky-800 text-[11px] mt-0.5 block">
+                          {deadlineStr 
+                            ? `Full refund available if cancelled before ${deadlineStr}.` 
+                            : (activePolicy?.summary || hotel?.policies?.cancellation || 'Refundable according to property cancellation policy.')}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="p-3 rounded-xl bg-amber-50/90 border border-amber-200/80 text-xs text-amber-950 flex items-start gap-2.5">
+                    <i className="fa-solid fa-triangle-exclamation text-amber-600 text-sm shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="block font-bold text-amber-900">
+                        {activePolicy?.badgeText || 'Non-Refundable Reservation'}
+                      </strong>
+                      <span className="text-amber-800 text-[11px] mt-0.5 block">
+                        {activePolicy?.summary || '100% cancellation fee applies if cancelled.'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Mobile Price Summary */}
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between text-slate-600">
+                  <span>Room Stay ({nights} {nights === 1 ? 'Night' : 'Nights'}, {roomsCount} {roomsCount === 1 ? 'Room' : 'Rooms'})</span>
+                  <span className="font-semibold text-slate-800">{formatPrice(basePrice)}</span>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>GST &amp; Taxes</span>
+                  <span className="font-semibold text-slate-800">{formatPrice(taxes)}</span>
+                </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-emerald-700 font-semibold">
+                    <span>Coupon Discount</span>
+                    <span>- {formatPrice(discount)}</span>
+                  </div>
+                )}
+                {convenienceFee > 0 && (
+                  <div className="flex justify-between text-slate-600">
+                    <span>Convenience Fee</span>
+                    <span className="font-semibold text-slate-800">{formatPrice(convenienceFee)}</span>
+                  </div>
+                )}
+                <div className="pt-2 border-t border-slate-200 flex items-baseline justify-between">
+                  <span className="font-bold text-slate-900 text-sm">Total Amount</span>
+                  <span className="text-xl font-black text-slate-900">{formatPrice(totalPrice)}</span>
+                </div>
+              </div>
+
+              {/* Pay Button at the Very Last on Mobile */}
               <button
                 type="button"
                 disabled={isSubmitting || isQuoteLoading}
                 onClick={handleCompleteBooking}
-                className="w-full py-4 px-4 rounded-xl bg-slate-900 hover:bg-black active:bg-zinc-900 active:scale-[0.99] text-white font-extrabold text-sm sm:text-base shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-4 px-4 rounded-xl bg-slate-900 hover:bg-black active:scale-[0.99] text-white font-extrabold text-sm sm:text-base shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? (
                   <>
                     <i className="fa-solid fa-circle-notch fa-spin text-sm" />
-                    <span>Processing with Razorpay...</span>
+                    <span>Confirming reservation...</span>
                   </>
                 ) : (
                   <>
                     <i className="fa-solid fa-lock text-sm" />
                     <span>
                       {paymentTab === 'razorpay'
-                        ? `Pay with Razorpay (${formatPrice(totalPrice)})`
+                        ? `Pay Now (${formatPrice(totalPrice)})`
                         : `Confirm Reservation (${formatPrice(totalPrice)})`}
                     </span>
                     <i className="fa-solid fa-arrow-right text-xs ml-1" />
@@ -655,17 +708,17 @@ export default function CheckoutScreen() {
                 )}
               </button>
 
-              <p className="text-xs text-slate-500 text-center mt-3 leading-relaxed">
-                By clicking <strong>Complete Booking</strong>, you agree to Hotel Factories&apos; <span className="underline">Terms of Service</span>, <span className="underline">Privacy Policy</span>, and property <span className="underline">Cancellation Policy</span>.
+              <p className="text-[11px] text-slate-400 text-center leading-relaxed">
+                By clicking <strong>{paymentTab === 'razorpay' ? 'Pay Now' : 'Confirm Reservation'}</strong>, you agree to Hotel Factories&apos; <span className="underline">Terms of Service</span> and property <span className="underline">Cancellation Policy</span>.
               </p>
             </div>
 
           </div>
 
           {/* ========================================================= */}
-          {/* RIGHT COLUMN: Dynamic Reservation Summary (5 cols)        */}
+          {/* RIGHT COLUMN: Dynamic Reservation Summary (Desktop Only)  */}
           {/* ========================================================= */}
-          <div className="lg:col-span-5 sticky top-22 space-y-4">
+          <div className="hidden lg:block lg:col-span-5 sticky top-22 space-y-4">
             
             {/* Main Reservation Card */}
             <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-4">
@@ -759,41 +812,73 @@ export default function CheckoutScreen() {
                       <i className="fa-solid fa-utensils mr-1" />Breakfast Included
                     </span>
                   ) : null}
-                  {room.amenities?.slice(0, 3).map((amenity, idx) => (
-                    <span key={idx}>
-                      <i className="fa-solid fa-check text-slate-400 mr-1" />{amenity}
-                    </span>
-                  ))}
+                  {(() => {
+                    const roomAms = [];
+                    if (Array.isArray(room.amenities)) roomAms.push(...room.amenities);
+                    if (Array.isArray(room.facilities)) roomAms.push(...room.facilities);
+                    if (roomAms.length === 0 && Array.isArray(hotel?.amenities)) roomAms.push(...hotel.amenities);
+                    return roomAms.slice(0, 4).map((amenity, idx) => (
+                      <span key={idx}>
+                        <i className="fa-solid fa-check text-slate-400 mr-1" />{amenity}
+                      </span>
+                    ));
+                  })()}
                   <span><i className="fa-solid fa-circle-check text-emerald-600 mr-1" />Instant Confirmation</span>
                 </div>
               </div>
 
-              {/* Hotel-Specific Cancellation & Refund Notice */}
-              {hotel?.cancellationPolicy?.refundable !== false ? (
-                <div className="p-3 rounded-xl bg-sky-50 border border-sky-100 text-xs text-sky-950 flex items-start gap-2.5">
-                  <i className="fa-solid fa-clock-rotate-left text-[#0ea5e9] text-sm shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="block font-bold text-sky-900">
-                      Cancellation Policy ({hotel.cancellationPolicy?.badgeText || 'Refundable'})
-                    </strong>
-                    <span className="text-sky-800 text-[11px] mt-0.5 block">
-                      {hotel.cancellationPolicy?.summary || hotel.policies?.cancellation || 'Refundable according to property cancellation policy.'}
-                    </span>
+              {/* Dynamic Property & Room Cancellation & Refund Policy */}
+              {(() => {
+                const activePolicy = room?.cancellationPolicy || hotel?.cancellationPolicy;
+                const isRefundable = activePolicy?.refundable !== false && String(activePolicy?.type || '').toUpperCase() !== 'NON_REFUNDABLE';
+                const windowHours = Number(activePolicy?.windowHours) || 24;
+
+                let deadlineStr = '';
+                if (isRefundable && checkInDate) {
+                  try {
+                    const checkInTime = new Date(`${checkInDate}T14:00:00`);
+                    const cutoff = new Date(checkInTime.getTime() - windowHours * 60 * 60 * 1000);
+                    deadlineStr = cutoff.toLocaleDateString('en-IN', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    });
+                  } catch (_) {}
+                }
+
+                if (isRefundable) {
+                  return (
+                    <div className="p-3 rounded-xl bg-sky-50 border border-sky-100 text-xs text-sky-950 flex items-start gap-2.5">
+                      <i className="fa-solid fa-clock-rotate-left text-[#0ea5e9] text-sm shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="block font-bold text-sky-900">
+                          Cancellation Policy: {activePolicy?.badgeText || `Free Cancellation (${windowHours}h)`}
+                        </strong>
+                        <span className="text-sky-800 text-[11px] mt-0.5 block">
+                          {deadlineStr 
+                            ? `Full refund available if cancelled before ${deadlineStr}. ${activePolicy?.summary || ''}` 
+                            : (activePolicy?.summary || hotel?.policies?.cancellation || 'Refundable according to property cancellation policy.')}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="p-3 rounded-xl bg-amber-50/90 border border-amber-200/80 text-xs text-amber-950 flex items-start gap-2.5">
+                    <i className="fa-solid fa-triangle-exclamation text-amber-600 text-sm shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="block font-bold text-amber-900">
+                        {activePolicy?.badgeText || 'Non-Refundable Reservation'}
+                      </strong>
+                      <span className="text-amber-800 text-[11px] mt-0.5 block">
+                        {activePolicy?.summary || 'This property operates on a non-refundable policy. In case of cancellation or no-show, 100% cancellation fee applies and no refund will be issued.'}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="p-3 rounded-xl bg-amber-50/90 border border-amber-200/80 text-xs text-amber-950 flex items-start gap-2.5">
-                  <i className="fa-solid fa-triangle-exclamation text-amber-600 text-sm shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="block font-bold text-amber-900">
-                      Non-Refundable Reservation
-                    </strong>
-                    <span className="text-amber-800 text-[11px] mt-0.5 block">
-                      {hotel.cancellationPolicy?.summary || 'This property operates on a non-refundable policy. In case of cancellation or no-show, no refund will be issued.'}
-                    </span>
-                  </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Price Breakdown */}
               <div className="pt-2 border-t border-slate-100 space-y-2 text-xs">
@@ -843,9 +928,39 @@ export default function CheckoutScreen() {
                     <span className="block text-[10px] text-slate-400">Includes all GST &amp; property taxes</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-2xl font-black text-[#003b95]">{formatPrice(totalPrice)}</span>
+                    <span className="text-2xl font-black text-slate-900">{formatPrice(totalPrice)}</span>
                     <span className="block text-[10px] font-semibold text-emerald-700">No hidden charges</span>
                   </div>
+                </div>
+
+                {/* On Desktop: Complete Booking Pay Button directly below Summary */}
+                <div className="pt-3">
+                  <button
+                    type="button"
+                    disabled={isSubmitting || isQuoteLoading}
+                    onClick={handleCompleteBooking}
+                    className="w-full py-3.5 px-4 rounded-xl bg-slate-900 hover:bg-black active:scale-[0.99] text-white font-extrabold text-sm sm:text-base shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <i className="fa-solid fa-circle-notch fa-spin text-sm" />
+                        <span>Confirming reservation...</span>
+                      </>
+                    ) : (
+                      <>
+                        <i className="fa-solid fa-lock text-sm" />
+                        <span>
+                          {paymentTab === 'razorpay'
+                            ? `Pay Now (${formatPrice(totalPrice)})`
+                            : `Confirm Reservation (${formatPrice(totalPrice)})`}
+                        </span>
+                        <i className="fa-solid fa-arrow-right text-xs ml-1" />
+                      </>
+                    )}
+                  </button>
+                  <p className="text-[11px] text-slate-400 text-center mt-2.5 leading-relaxed">
+                    By clicking <strong>{paymentTab === 'razorpay' ? 'Pay Now' : 'Confirm Reservation'}</strong>, you agree to property terms and cancellation policies.
+                  </p>
                 </div>
 
               </div>
@@ -854,11 +969,11 @@ export default function CheckoutScreen() {
 
             {/* Hotel Factories Guarantee Box */}
             <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-100 text-xs text-slate-600 flex items-center gap-3">
-              <i className="fa-solid fa-shield-halved text-2xl text-[#003b95] shrink-0" />
+              <i className="fa-solid fa-shield-halved text-2xl text-slate-900 shrink-0" />
               <div>
                 <strong className="block text-slate-900 font-bold mb-0.5">Hotel Factories Booking Guarantee</strong>
                 <p className="text-[11px] leading-relaxed">
-                  Your reservation is verified instantly with the property. Official GST tax invoice and encrypted Razorpay UPI/Card checkout.
+                  Your reservation is verified instantly with the property. Official GST tax invoice and encrypted secure checkout.
                 </p>
               </div>
             </div>

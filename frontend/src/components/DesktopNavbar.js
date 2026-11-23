@@ -14,6 +14,7 @@ export default function DesktopNavbar() {
     toggleCurrency,
     user,
     setIsAuthSheetOpen,
+    openAuthModal,
     favorites,
     bookings,
     logout,
@@ -106,7 +107,7 @@ export default function DesktopNavbar() {
 
           {/* Notifications Bell */}
           <button
-            className="w-9 h-9 rounded-full hover:bg-zinc-100 flex items-center justify-center text-zinc-700 hover:text-black text-sm transition-colors cursor-pointer"
+            className="hidden sm:flex w-9 h-9 rounded-full hover:bg-zinc-100 items-center justify-center text-zinc-700 hover:text-black text-sm transition-colors cursor-pointer"
             aria-label="Notifications"
             onClick={() => {}}
           >
@@ -115,7 +116,7 @@ export default function DesktopNavbar() {
 
           {/* Wishlist Heart */}
           <button
-            className="relative w-9 h-9 rounded-full hover:bg-zinc-100 flex items-center justify-center text-zinc-700 hover:text-black text-sm transition-colors cursor-pointer"
+            className="hidden sm:flex relative w-9 h-9 rounded-full hover:bg-zinc-100 items-center justify-center text-zinc-700 hover:text-black text-sm transition-colors cursor-pointer"
             aria-label="Saved properties"
             onClick={() => switchNav('saved')}
           >
@@ -194,12 +195,12 @@ export default function DesktopNavbar() {
                     <button
                       className="w-full px-4 py-2 text-left text-xs font-medium text-zinc-700 hover:bg-zinc-50 hover:text-black flex items-center gap-2.5 transition-colors cursor-pointer"
                       onClick={() => {
-                        setIsAuthSheetOpen(true);
+                        switchNav('profile');
                         setIsUserMenuOpen(false);
                       }}
                     >
                       <i className="fa-solid fa-user-pen text-zinc-400 w-4 text-center" />
-                      Profile & Edit Name
+                      Member Profile &amp; Preferences
                     </button>
 
                     {(user.role === 'admin' || user.role === 'hotel_owner') && (
@@ -233,16 +234,16 @@ export default function DesktopNavbar() {
               )}
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <button
-                className="px-4 py-1.5 rounded-full border border-zinc-300 hover:border-black text-xs font-semibold text-zinc-900 hover:bg-zinc-50 transition-all cursor-pointer"
-                onClick={() => setIsAuthSheetOpen(true)}
+                className="hidden sm:inline-flex px-4 py-1.5 rounded-full border border-zinc-300 hover:border-black text-xs font-semibold text-zinc-900 hover:bg-zinc-50 transition-all cursor-pointer"
+                onClick={() => (openAuthModal ? openAuthModal('register') : setIsAuthSheetOpen(true))}
               >
                 Register
               </button>
               <button
-                className="px-4 py-1.5 rounded-full bg-sky-500 hover:bg-sky-600 active:scale-[0.98] text-white text-xs font-semibold shadow-xs hover:shadow transition-all cursor-pointer"
-                onClick={() => setIsAuthSheetOpen(true)}
+                className="px-3.5 sm:px-4 py-1.5 rounded-full bg-sky-500 hover:bg-sky-600 active:scale-[0.98] text-white text-xs font-bold sm:font-semibold shadow-xs hover:shadow transition-all cursor-pointer shrink-0"
+                onClick={() => (openAuthModal ? openAuthModal('login') : setIsAuthSheetOpen(true))}
               >
                 Sign in
               </button>

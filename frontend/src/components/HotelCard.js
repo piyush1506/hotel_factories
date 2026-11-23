@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import HotelCardImageCarousel from './common/HotelCardImageCarousel';
 
 export default function HotelCard({ hotel }) {
   const { openHotelDetail, toggleFavorite, favorites, formatPrice } = useApp();
@@ -34,44 +35,40 @@ export default function HotelCard({ hotel }) {
 
   return (
     <article
-      className="group relative cursor-pointer overflow-hidden rounded-3xl border border-slate-200/80 bg-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-slate-200/40"
+      className="group relative cursor-pointer overflow-hidden rounded-md border border-slate-200/80 bg-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-slate-200/40"
       onClick={() => openHotelDetail(hotelId, hotel)}
     >
-      {/* Media Box */}
-      <div className="relative w-full aspect-[16/10] overflow-hidden bg-slate-100">
-        <img
-          src={imageSrc}
-          alt={hotel.name}
-          loading="lazy"
-          onError={(e) => { e.currentTarget.src = '/images/hotel-leaf-goa.png'; }}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-
-        {/* Wishlist Heart Button */}
-        <button
-          className={`absolute top-3 right-3 z-10 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition-all cursor-pointer ${
-            isFavorite
-              ? 'bg-teal-100 text-teal-800 shadow-md'
-              : 'bg-white/80 text-slate-800 hover:bg-white hover:text-teal-500 shadow-xs'
-          }`}
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleFavorite(hotelId);
-          }}
-          aria-label={isFavorite ? 'Remove from saved' : 'Save to wishlist'}
-          type="button"
-        >
-          <i className={`${isFavorite ? 'fa-solid' : 'fa-regular'} fa-heart text-sm`} />
-        </button>
-      </div>
+      {/* Media Box with Swipeable Image Carousel */}
+      <HotelCardImageCarousel
+        hotel={hotel}
+        hotelName={hotel.name}
+        aspectRatio="aspect-[16/10]"
+        overlayTopRight={(
+          <button
+            className={`w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition-all cursor-pointer ${
+              isFavorite
+                ? 'bg-black text-white shadow-md'
+                : 'bg-white/80 text-slate-800 hover:bg-white hover:text-black shadow-xs'
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleFavorite(hotelId);
+            }}
+            aria-label={isFavorite ? 'Remove from saved' : 'Save to wishlist'}
+            type="button"
+          >
+            <i className={`${isFavorite ? 'fa-solid text-rose-500' : 'fa-regular'} fa-heart text-sm`} />
+          </button>
+        )}
+      />
 
       {/* Card Info Box */}
       <div className="p-5 flex flex-col gap-4">
         <div>
           {/* Rating Badge */}
           <div className="flex items-center gap-2 mb-2 text-xs">
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">
-              <i className="fa-solid fa-star text-[8px]" /> {rating.toFixed(1)}
+            <span className="inline-flex items-center gap-1 text-slate-900 font-bold text-xs">
+              <i className="fa-solid fa-star text-amber-500 text-[10px]" /> {rating.toFixed(1)}
             </span>
           </div>
 

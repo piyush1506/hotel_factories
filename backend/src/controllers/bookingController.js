@@ -162,6 +162,13 @@ class BookingController {
       if (!verified) {
         return res.status(404).json({ success: false, message: 'Booking verification record not found or code invalid.' });
       }
+      if (verified.isValid === false) {
+        return res.status(400).json({
+          success: false,
+          message: verified.error || 'Signature verification failed: forged or tampered pass.',
+          verified
+        });
+      }
       res.status(200).json({ success: true, verified });
     } catch (err) {
       next(err);

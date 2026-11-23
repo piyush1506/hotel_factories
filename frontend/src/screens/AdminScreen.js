@@ -23,6 +23,7 @@ import AdminCoupons from '../components/admin/AdminCoupons';
 import AdminReviews from '../components/admin/AdminReviews';
 import AdminSettings from '../components/admin/AdminSettings';
 import AdminCommandPalette from '../components/admin/AdminCommandPalette';
+import AdminQRScannerModal from '../components/admin/AdminQRScannerModal';
 import { ADMIN_PAGE_META } from '../components/admin/adminNav';
 import { LoadingState } from '../components/admin/AdminUI';
 
@@ -65,7 +66,8 @@ export default function AdminScreen() {
     switchNav,
     setIsAuthSheetOpen,
     showToast,
-    fetchHotels
+    fetchHotels,
+    verifyBookingCode
   } = useApp();
 
   const [data, setData] = useState(EMPTY_DATA);
@@ -79,6 +81,14 @@ export default function AdminScreen() {
   const [couponCreateSignal, setCouponCreateSignal] = useState(0);
   const [commandOpen, setCommandOpen] = useState(false);
   const [focusRequest, setFocusRequest] = useState(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
+
+  const handleScanPass = useCallback(async (scannedCode) => {
+    setScannerOpen(false);
+    if (verifyBookingCode) {
+      await verifyBookingCode(scannedCode);
+    }
+  }, [verifyBookingCode]);
 
   const isAdmin = user?.role === 'admin';
   const activeTab = LEGACY_TABS[adminTab] || (VALID_TABS.has(adminTab) ? adminTab : 'dashboard');
@@ -167,6 +177,11 @@ export default function AdminScreen() {
 
   const handleCommandSelect = useCallback((result) => {
     if (!result) return;
+    if (result.action === 'scan-qr') {
+      setCommandOpen(false);
+      setScannerOpen(true);
+      return;
+    }
     navigateAdmin(result.tab);
     if (result.focusId) {
       setFocusRequest({ type: result.type, id: result.focusId, nonce: Date.now() });
@@ -544,6 +559,7 @@ export default function AdminScreen() {
           alerts={alerts}
           onNavigate={navigateAdmin}
           onSearch={() => setCommandOpen(true)}
+          onOpenScanner={() => setScannerOpen(true)}
         />
 
         <main className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
@@ -575,6 +591,7 @@ export default function AdminScreen() {
                   asOf={lastUpdated}
                   onNavigate={navigateAdmin}
                   onQuickAction={handleQuickAction}
+                  onOpenScanner={() => setScannerOpen(true)}
                 />
               )}
               {activeTab === 'reports' && (
@@ -613,6 +630,7 @@ export default function AdminScreen() {
                   onMarkNoShow={handleMarkNoShow}
                   onCancel={handleCancelBooking}
                   focusRequest={focusRequest}
+                  onOpenScanner={() => setScannerOpen(true)}
                 />
               )}
               {activeTab === 'customers' && (
@@ -701,6 +719,12 @@ export default function AdminScreen() {
           activeTab={activeTab}
         />
       )}
+
+      <AdminQRScannerModal
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScan={handleScanPass}
+      />
     </div>
   );
 }

@@ -12,6 +12,7 @@ const couponRoutes = require('./couponRoutes');
 const reviewRoutes = require('./reviewRoutes');
 const adminRoutes = require('./adminRoutes');
 const hotelierRoutes = require('./hotelierRoutes');
+const uploadRoutes = require('./uploadRoutes');
 
 // Health Check API
 router.get('/health', (req, res) => {
@@ -48,5 +49,6 @@ router.use('/coupons', couponRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/admin', adminRoutes);
 router.use('/hotelier', hotelierRoutes);
+router.use('/upload', uploadRoutes);
 
 module.exports = router;

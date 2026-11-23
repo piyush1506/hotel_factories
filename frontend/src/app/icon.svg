@@ -2,38 +2,43 @@
   <defs>
     <linearGradient id="hf-bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#0284c7" />
-      <stop offset="100%" stop-color="#001f4d" />
+      <stop offset="60%" stop-color="#0369a1" />
+      <stop offset="100%" stop-color="#090d16" />
     </linearGradient>
-    <linearGradient id="gold-crown" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fde047" />
-      <stop offset="100%" stop-color="#f59e0b" />
+    <linearGradient id="gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <linearGradient id="white-sheen" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.05" />
     </linearGradient>
   </defs>
 
   <!-- Squircle Base with smooth rounded corners -->
   <rect width="64" height="64" rx="16" fill="url(#hf-bg)" />
-  <rect x="1" y="1" width="62" height="62" rx="15" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1.5" />
+  <rect x="1" y="1" width="62" height="62" rx="15" fill="none" stroke="url(#white-sheen)" stroke-width="1.5" />
 
-  <!-- 5-Star Luxury Crown on Top -->
-  <path d="M22 19 L27 14 L32 17 L37 14 L42 19 Z" fill="url(#gold-crown)" />
-  <circle cx="32" cy="11" r="2.2" fill="#fbbf24" />
+  <!-- 5-Star Luxury Star on Top -->
+  <path d="M32 9 L34.2 13.6 L39.2 14.3 L35.6 17.8 L36.5 22.8 L32 20.4 L27.5 22.8 L28.4 17.8 L24.8 14.3 L29.8 13.6 Z" fill="url(#gold-grad)" />
 
-  <!-- Grand Hotel Architecture Body (Pure White) -->
-  <path d="M16 22 H48 A2 2 0 0 1 50 24 V49 H14 V24 A2 2 0 0 1 16 22 Z" fill="#ffffff" />
+  <!-- Grand Hotel Architecture Body (Pure Crisp White) -->
+  <path d="M16 26 H48 A2 2 0 0 1 50 28 V51 H14 V28 A2 2 0 0 1 16 26 Z" fill="#ffffff" />
 
   <!-- Hotel Upper Floor Windows (Sky Blue) -->
-  <rect x="19" y="26" width="5.5" height="5.5" rx="1.2" fill="#0284c7" />
-  <rect x="29.2" y="26" width="5.5" height="5.5" rx="1.2" fill="#0284c7" />
-  <rect x="39.5" y="26" width="5.5" height="5.5" rx="1.2" fill="#0284c7" />
+  <rect x="19" y="30" width="6" height="5" rx="1.2" fill="#0284c7" />
+  <rect x="29" y="30" width="6" height="5" rx="1.2" fill="#0284c7" />
+  <rect x="39" y="30" width="6" height="5" rx="1.2" fill="#0284c7" />
 
-  <rect x="19" y="34.5" width="5.5" height="5.5" rx="1.2" fill="#0284c7" />
-  <rect x="29.2" y="34.5" width="5.5" height="5.5" rx="1.2" fill="#0284c7" />
-  <rect x="39.5" y="34.5" width="5.5" height="5.5" rx="1.2" fill="#0284c7" />
+  <rect x="19" y="37" width="6" height="5" rx="1.2" fill="#0284c7" />
+  <rect x="29" y="37" width="6" height="5" rx="1.2" fill="#0284c7" />
+  <rect x="39" y="37" width="6" height="5" rx="1.2" fill="#0284c7" />
 
-  <!-- Ground Floor Grand Arch Portal -->
-  <path d="M25 49 V41 A7 7 0 0 1 39 41 V49 Z" fill="#001f4d" />
-  <path d="M27.5 49 V42 A4.5 4.5 0 0 1 36.5 42 V49 Z" fill="#f59e0b" opacity="0.95" />
+  <!-- Ground Floor Grand Arch Portal (Warm Golden Archway) -->
+  <path d="M26 51 V45 A6 6 0 0 1 38 45 V51 Z" fill="#090d16" />
+  <path d="M28 51 V45.5 A4 4 0 0 1 36 45.5 V51 Z" fill="url(#gold-grad)" />
 
   <!-- Base plinth -->
-  <rect x="12" y="49" width="40" height="3" rx="1.5" fill="#f59e0b" />
+  <rect x="12" y="51" width="40" height="3" rx="1.5" fill="url(#gold-grad)" />
 </svg>

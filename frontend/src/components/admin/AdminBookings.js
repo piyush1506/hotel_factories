@@ -42,7 +42,7 @@ const STATUS_TABS = [
   { value: 'HELD', label: 'Pending' }
 ];
 
-export default function AdminBookings({ bookings = [], hotels = [], onCheckIn, onCheckOut, onMarkNoShow, onCancel, focusRequest }) {
+export default function AdminBookings({ bookings = [], hotels = [], onCheckIn, onCheckOut, onMarkNoShow, onCancel, focusRequest, onOpenScanner }) {
   const { verifyBookingCode } = useApp();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
@@ -182,9 +182,12 @@ export default function AdminBookings({ bookings = [], hotels = [], onCheckIn, o
         description="Monitor every reservation, verify payment and payout state, check guests in, and handle cancellations from one ledger."
         actions={
           <div className="flex items-center gap-2">
-            <PrimaryButton icon="fa-key" onClick={() => setIsUnlockModalOpen(true)}>
-              Unlock & Verify QR Pass
+            <PrimaryButton icon="fa-camera" onClick={onOpenScanner}>
+              Scan QR Pass
             </PrimaryButton>
+            <GhostButton icon="fa-key" onClick={() => setIsUnlockModalOpen(true)}>
+              Unlock Token
+            </GhostButton>
             <GhostButton icon="fa-file-arrow-down" onClick={exportBookings}>Export CSV</GhostButton>
           </div>
         }
@@ -505,6 +508,26 @@ export default function AdminBookings({ bookings = [], hotels = [], onCheckIn, o
         }
       >
         <div className="space-y-4">
+          <button
+            type="button"
+            onClick={() => {
+              setIsUnlockModalOpen(false);
+              if (onOpenScanner) onOpenScanner();
+            }}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-sky-300 bg-sky-50 py-3 text-xs font-semibold text-sky-800 shadow-sm transition hover:bg-sky-100 hover:border-sky-400 active:scale-[0.99]"
+          >
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-sky-600 text-white shadow">
+              <i className="fa-solid fa-camera text-xs" />
+            </span>
+            <span>Launch Live Camera QR Scanner</span>
+          </button>
+
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <span className="h-px flex-1 bg-slate-200" />
+            <span>or paste manually</span>
+            <span className="h-px flex-1 bg-slate-200" />
+          </div>
+
           <div className="rounded-lg border border-sky-200 bg-sky-50 px-3.5 py-3 text-xs leading-relaxed text-sky-800">
             <i className="fa-solid fa-shield-halved mr-1.5 text-sky-600"></i>
             Paste the raw encrypted pass token (<code className="font-mono font-bold">HF1.iv.cipher.authTag</code>), a reservation code (<code className="font-mono font-bold">HF-XXXXXX</code>), or scan the guest&apos;s QR code. The server will use the secret AES-256 vault key to decrypt, authenticate, and display verified guest details.

@@ -130,9 +130,11 @@ function calculateFinancialBreakdown({
 async function generateQRCode(textData) {
   try {
     return await QRCode.toDataURL(textData, {
-      errorCorrectionLevel: 'H',
-      margin: 2,
-      width: 250,
+      // The compact pass payload no longer needs maximum density; medium ECC
+      // keeps the module count low while still tolerating print/screen noise.
+      errorCorrectionLevel: 'M',
+      margin: 4,
+      width: 600,
       color: {
         dark: '#1e293b',
         light: '#ffffff'

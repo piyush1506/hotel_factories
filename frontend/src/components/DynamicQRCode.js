@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import QRCode from 'qrcode';
 import { useApp } from '../context/AppContext';
 
 /**
  * DynamicQRCode Component with Cryptographic Anti-Forgery Protection
- * - Encodes a server-signed verification URL containing an HMAC-SHA256 cryptographic signature
+ * - Encodes a compact AES-256-GCM vault token (or a short HMAC-signed URL)
  * - Protects against arbitrary/counterfeit QR payload generation by unauthorized third parties
- * - When scanned, the server validates the digital signature against the private server key
+ * - When scanned, the backend authenticates the payload against the private server key
  * - Interactive scanner enlargement modal with laser scan-line effect
  * - Direct 1-tap download of high-res QR pass PNG to phone gallery
  * - 1-tap interactive tests: Authenticate Genuine Pass or Simulate Tampered QR
@@ -22,7 +22,6 @@ export default function DynamicQRCode({
   const { showToast, verifyBookingCode } = useApp();
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [isEnlarged, setIsEnlarged] = useState(false);
-  const [lastSynced, setLastSynced] = useState('');
   const [copiedLink, setCopiedLink] = useState(false);
 
   const bookingCode = booking?.bookingCode || (
@@ -36,29 +35,42 @@ export default function DynamicQRCode({
   const passSignature = booking?.passSignature || '';
   const vaultToken = booking?.vaultToken || '';
 
-  // Construct encrypted verification URL locked with backend secret key
-  const getVerifyUrl = (forceTamper = false) => {
+  // Construct the shortest verification payload. Compact vault tokens are
+  // preferred; legacy long tokens fall back to the short signed URL so the QR
+  // never becomes too dense for a camera scanner.
+  const getVerifyUrl = useCallback((forceTamper = false) => {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
     if (forceTamper) {
       return `${baseUrl}/?vault=HF1.TAMPERED_IV_KEY.FORGED_CIPHERTEXT.INVALID_TAG`;
     }
+
+    const signedUrl = `${baseUrl}/?verify=${encodeURIComponent(bookingCode)}${
+      passSignature ? `&sig=${encodeURIComponent(passSignature)}` : ''
+    }`;
+
+    if (vaultToken && vaultToken.length <= 140) {
+      return `${baseUrl}/?vault=${encodeURIComponent(vaultToken)}`;
+    }
+    if (passSignature) {
+      return signedUrl;
+    }
     if (vaultToken) {
       return `${baseUrl}/?vault=${encodeURIComponent(vaultToken)}`;
     }
-    const sigParam = passSignature ? `&sig=${encodeURIComponent(passSignature)}` : '';
-    return `${baseUrl}/?verify=${encodeURIComponent(bookingCode)}${sigParam}`;
-  };
+    return signedUrl;
+  }, [bookingCode, passSignature, vaultToken]);
 
   useEffect(() => {
     let isMounted = true;
     const generateQR = async () => {
       try {
         const verifyUrl = getVerifyUrl();
-        // Generate high-resolution QR with High (H) error correction to support center monogram
+        // Medium ECC keeps the module count low; the generous 4-module quiet
+        // zone and 640px source make the pass easy to scan from a screen.
         const url = await QRCode.toDataURL(verifyUrl, {
-          errorCorrectionLevel: 'H',
-          margin: 1,
-          width: 340,
+          errorCorrectionLevel: 'M',
+          margin: 4,
+          width: 640,
           color: {
             dark: '#0f172a',
             light: '#ffffff'
@@ -66,8 +78,6 @@ export default function DynamicQRCode({
         });
         if (isMounted) {
           setQrDataUrl(url);
-          const now = new Date();
-          setLastSynced(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
         }
       } catch (err) {
         console.error('Failed to generate dynamic QR code:', err);
@@ -78,7 +88,7 @@ export default function DynamicQRCode({
     return () => {
       isMounted = false;
     };
-  }, [bookingCode, passSignature]);
+  }, [getVerifyUrl]);
 
   const handleDownloadQR = (e) => {
     if (e) e.stopPropagation();
@@ -114,18 +124,25 @@ export default function DynamicQRCode({
 
   return (
     <>
-      {/* Compact Interactive QR Pass Thumbnail */}
+      {/* Compact Interactive QR Pass Preview */}
       <div 
         onClick={() => setIsEnlarged(true)}
-        className={`group relative flex items-center gap-2.5 p-2 rounded-xl bg-slate-50 hover:bg-slate-100/90 border border-slate-200 hover:border-slate-300 transition-all cursor-pointer ${className}`}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            setIsEnlarged(true);
+          }
+        }}
+        className={`group flex flex-col items-center gap-3 p-4 rounded-2xl bg-slate-50 hover:bg-slate-100/90 border border-slate-200 hover:border-slate-300 transition-all cursor-pointer ${className}`}
         title="Click to enlarge for scanner"
         role="button"
         tabIndex={0}
+        aria-label={`Show QR pass for ${bookingCode}`}
       >
-        {/* Scannable Frame with corner brackets */}
+        {/* Scannable frame with a generous white quiet zone */}
         <div 
-          className="relative shrink-0 bg-white p-1 rounded-lg border border-slate-200 shadow-2xs group-hover:shadow-xs transition-shadow flex items-center justify-center overflow-hidden"
-          style={{ width: size + 8, height: size + 8 }}
+          className="relative shrink-0 aspect-square bg-white p-2 rounded-xl border border-slate-200 shadow-2xs group-hover:shadow-xs transition-shadow flex items-center justify-center overflow-hidden"
+          style={{ width: size + 16, maxWidth: '100%' }}
         >
           {qrDataUrl ? (
             <img 
@@ -139,37 +156,30 @@ export default function DynamicQRCode({
             </div>
           )}
 
-          {/* Tiny Center "HF" badge overlay */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span className="w-3.5 h-3.5 rounded-full bg-slate-900 text-white font-black text-[6px] flex items-center justify-center shadow-xs border border-white">
-              HF
-            </span>
-          </div>
-
           {/* Hover zoom pill overlay */}
-          <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[9px] font-bold">
+          <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">
             <i className="fa-solid fa-expand"></i>
           </div>
         </div>
 
         {/* Dynamic Pass Details */}
         {showLabel && (
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-emerald-700">
+          <div className="w-full min-w-0 text-center">
+            <div className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-700">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>AES-256 ENCRYPTED PASS</span>
+              <span>AES-256 Encrypted Pass</span>
             </div>
 
-            <div className="text-xs font-black text-slate-900 truncate mt-0.5">
+            <div className="text-sm font-black text-slate-900 truncate mt-1">
               {booking?.guestName || 'Guest'}
             </div>
 
-            <div className="text-[10px] text-slate-500 font-medium truncate">
+            <div className="text-xs text-slate-500 font-medium truncate mt-0.5">
               {booking?.roomName || 'Executive Room'} · {bookingCode}
             </div>
 
-            <div className="text-[9px] text-[#003b95] font-bold flex items-center gap-1 mt-1">
-              <i className="fa-solid fa-lock text-[8px] text-emerald-600"></i>
+            <div className="text-[10px] text-[#003b95] font-bold inline-flex items-center gap-1 mt-1.5">
+              <i className="fa-solid fa-lock text-[9px] text-emerald-600"></i>
               <span>Locked via Secret Key · Tap to Enlarge</span>
             </div>
           </div>
@@ -183,7 +193,7 @@ export default function DynamicQRCode({
           onClick={() => setIsEnlarged(false)}
         >
           <div 
-            className="w-full max-w-[360px] bg-white rounded-3xl p-5 shadow-2xl border border-slate-200 text-center relative"
+            className="w-full max-w-[420px] bg-white rounded-3xl p-5 shadow-2xl border border-slate-200 text-center relative"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close button */}
@@ -208,8 +218,8 @@ export default function DynamicQRCode({
               {booking?.guestName || 'Guest'} · {bookingCode}
             </p>
 
-            {/* High-Resolution QR Container with Laser Scan Beam */}
-            <div className="relative my-3 p-3 bg-white rounded-2xl border-2 border-slate-900 shadow-lg mx-auto w-[210px] h-[210px] flex items-center justify-center overflow-hidden">
+            {/* Large, unobstructed QR with the laser scan beam */}
+            <div className="relative my-4 p-3 bg-white rounded-2xl border-2 border-slate-900 shadow-lg mx-auto w-[320px] max-w-full aspect-square flex items-center justify-center overflow-hidden">
               {qrDataUrl && (
                 <img 
                   src={qrDataUrl} 
@@ -218,16 +228,13 @@ export default function DynamicQRCode({
                 />
               )}
 
-              {/* Center Monogram */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-8 h-8 rounded-full bg-slate-900 text-amber-300 font-black text-xs flex items-center justify-center shadow-md border-2 border-white">
-                  HF
-                </div>
-              </div>
-
               {/* Animated Laser Scanner Line */}
               <div className="absolute inset-x-2 top-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent opacity-80 animate-pulse pointer-events-none"></div>
             </div>
+
+            <p className="text-[10px] font-semibold text-slate-500 mb-3">
+              Fill the front-desk scanner frame with this QR for instant check-in.
+            </p>
 
             {/* Security Explanation Box */}
             <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-left text-[10px] space-y-1 mb-3">

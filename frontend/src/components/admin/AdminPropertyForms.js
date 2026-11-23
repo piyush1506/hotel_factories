@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { PRESET_IMAGES } from '../../utils/helpers';
 import { Field, GhostButton, Modal, PrimaryButton, SelectInput, TextArea, TextInput } from './AdminUI';
+import CloudinaryImageUpload from '../common/CloudinaryImageUpload';
 
 const emptyProperty = {
   name: '',
@@ -187,26 +188,19 @@ export function PropertyForm({ open, onClose, onSubmit, busy }) {
             <Field label="Platform commission %" htmlFor="property-commission" hint="0 to 40%">
               <TextInput id="property-commission" type="number" min="0" max="40" step="0.5" value={form.commissionRate} onChange={update('commissionRate')} />
             </Field>
-            <Field label="Cover image URL" htmlFor="property-image">
-              <TextInput id="property-image" type="url" value={form.image} onChange={update('image')} placeholder="https://…" />
+            <Field label="Amenities" htmlFor="property-amenities" className="sm:col-span-1" hint="Comma-separated">
+              <TextInput id="property-amenities" value={form.amenities} onChange={update('amenities')} placeholder="WiFi, Pool, Breakfast" />
             </Field>
-            <Field label="Amenities" htmlFor="property-amenities" className="sm:col-span-3" hint="Comma-separated, e.g. Free WiFi, Pool, Breakfast">
-              <TextInput id="property-amenities" value={form.amenities} onChange={update('amenities')} />
-            </Field>
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-xs font-bold text-slate-500">Presets:</span>
-            {Object.entries(PRESET_IMAGES).slice(0, 6).map(([key, url]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setForm((current) => ({ ...current, image: url }))}
-                className={`h-9 w-12 overflow-hidden rounded-lg border-2 transition ${form.image === url ? 'border-blue-500 ring-2 ring-blue-100' : 'border-transparent hover:border-slate-300'}`}
-                title={`Use ${key} image`}
-              >
-                <img src={url} alt={key} className="h-full w-full object-cover" />
-              </button>
-            ))}
+            <div className="sm:col-span-3 pt-2">
+              <CloudinaryImageUpload
+                label="Property Cover Photo (Cloudinary CDN)"
+                value={form.image}
+                onChange={(newUrl) => setForm((current) => ({ ...current, image: newUrl }))}
+                folder="hotel_factories/hotels"
+                presets={Object.entries(PRESET_IMAGES)}
+                hint="Upload high-res hotel exterior/lobby photo directly to Cloudinary CDN, or choose a preset."
+              />
+            </div>
           </div>
         </section>
 
@@ -404,9 +398,16 @@ export function RoomForm({ open, onClose, onSubmit, room, hotel, busy }) {
               </SelectInput>
             </Field>
           )}
-          <Field label="Room image URL" htmlFor="room-image" className="sm:col-span-2">
-            <TextInput id="room-image" type="url" value={form.image} onChange={update('image')} placeholder="https://…" />
-          </Field>
+          <div className="sm:col-span-2 pt-2">
+            <CloudinaryImageUpload
+              label="Room Photo (Cloudinary CDN)"
+              value={form.image}
+              onChange={(newUrl) => setForm((current) => ({ ...current, image: newUrl }))}
+              folder="hotel_factories/rooms"
+              presets={Object.entries(PRESET_IMAGES)}
+              hint="Upload room interior/bed photo directly to Cloudinary CDN."
+            />
+          </div>
         </div>
       </form>
     </Modal>

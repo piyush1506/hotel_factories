@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { bookingAPI } from '../services/api';
 
 export default function VerifyModal() {
   const { isVerifyModalOpen, setIsVerifyModalOpen, verifiedPassData, showToast, formatPrice } = useApp();
@@ -23,16 +24,8 @@ export default function VerifyModal() {
 
     setCheckingIn(true);
     try {
-      const apiBase = process.env.NEXT_PUBLIC_BACKEND_URL || '/api';
-      const res = await fetch(`${apiBase}/bookings/check-in`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ bookingCode: data.bookingCode })
-      });
-      const json = await res.json();
-      if (json.success) {
+      const json = await bookingAPI.checkIn(data.bookingCode);
+      if (json && json.success) {
         setCheckedInSuccess(true);
         showToast(`Guest ${data.guestName} successfully checked in!`);
       } else {
@@ -74,13 +67,13 @@ export default function VerifyModal() {
             </div>
             <div>
               <div className="text-[10px] font-black tracking-wider uppercase text-rose-700">
-                DECRYPTION REJECTED: FORGED OR TAMPERED
+                VERIFICATION REJECTED: FORGED OR TAMPERED
               </div>
               <h3 className="text-sm font-black text-rose-950 leading-snug">
-                Cannot Unlock QR with Secret Key
+                Pass Failed Cryptographic Authentication
               </h3>
               <p className="text-[10px] text-rose-700 mt-0.5 leading-tight">
-                The QR ciphertext failed cryptographic authentication. It was either forged or altered without the server secret key. Check-in is blocked.
+                The QR payload failed cryptographic authentication. It was either forged or altered without the server secret key. Check-in is blocked.
               </p>
             </div>
           </div>

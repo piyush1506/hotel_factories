@@ -53,7 +53,7 @@ class DatabaseEngine {
         ssl: { rejectUnauthorized: false },
         max: 10,
         idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 10000,
+        connectionTimeoutMillis: 30000,
       });
 
       const client = await this.pool.connect();

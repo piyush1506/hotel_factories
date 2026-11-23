@@ -19,6 +19,7 @@ import SavedScreen from '../screens/SavedScreen';
 import AdminScreen from '../screens/AdminScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
 import DestinationsScreen from '../screens/DestinationsScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 export default function App() {
   const {
     currentScreen,
@@ -57,6 +58,7 @@ export default function App() {
         {currentScreen === 'destinations' && <DestinationsScreen />}
         {currentScreen === 'bookings' && <BookingsScreen />}
         {currentScreen === 'saved' && <SavedScreen />}
+        {currentScreen === 'profile' && <ProfileScreen />}
         {currentScreen === 'admin' && <AdminScreen />}
       </main>
 

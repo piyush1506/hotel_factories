@@ -402,28 +402,51 @@ export const AppProvider = ({ children, initialScreen = 'home' }) => {
   const verifyBookingCode = useCallback(async (codeOrVault, sig = '') => {
     if (!codeOrVault) return;
     try {
-      const trimmed = String(codeOrVault).trim();
-      const isVault = trimmed.startsWith('HF1.') || (trimmed.includes('.') && trimmed.split('.').length === 4);
+      let trimmed = String(codeOrVault).trim();
+      let querySig = sig;
+
+      // Automatically parse full verification URLs (e.g. from camera QR scanner or copied URLs)
+      if (trimmed.includes('vault=')) {
+        const match = trimmed.match(/[?&]vault=([^&#\s]+)/);
+        if (match) trimmed = decodeURIComponent(match[1]);
+      } else if (trimmed.includes('verify=')) {
+        const match = trimmed.match(/[?&]verify=([^&#\s]+)/);
+        const sigMatch = trimmed.match(/[?&]sig=([^&#\s]+)/);
+        if (match) {
+          trimmed = decodeURIComponent(match[1]);
+          if (sigMatch) querySig = decodeURIComponent(sigMatch[1]);
+        }
+      }
+
+      const isVault = /^HF1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(trimmed);
       const apiBase = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
       
       let url = '';
       if (isVault) {
         url = `${apiBase}/bookings/unlock-vault?vault=${encodeURIComponent(trimmed)}`;
       } else {
-        const query = sig ? `?sig=${encodeURIComponent(sig)}` : '';
+        const query = querySig ? `?sig=${encodeURIComponent(querySig)}` : '';
         url = `${apiBase}/bookings/verify/${encodeURIComponent(trimmed.toUpperCase())}${query}`;
       }
 
       const res = await fetch(url);
       const json = await res.json();
+
+      // Rejected signatures / forged vaults must be surfaced as failures even
+      // when the API responds with HTTP 400.
+      if (json.verified && json.verified.isValid === false) {
+        setVerifiedPassData(json.verified);
+        setIsVerifyModalOpen(true);
+        showToast(
+          json.message || json.verified.error || 'Verification failed: forged or tampered pass.',
+          'error'
+        );
+        return json.verified;
+      }
+
       if (json.success && json.verified) {
         setVerifiedPassData(json.verified);
         setIsVerifyModalOpen(true);
-        return json.verified;
-      } else if (json.verified && !json.verified.isValid) {
-        setVerifiedPassData(json.verified);
-        setIsVerifyModalOpen(true);
-        showToast(json.message || 'Decryption failed: Token is counterfeit!', 'error');
         return json.verified;
       }
     } catch {

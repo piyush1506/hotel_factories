@@ -4,7 +4,7 @@ import React from 'react';
 import { useApp } from '../context/AppContext';
 
 export default function DesktopFooter() {
-  const { switchNav, setSelectedDestination, setIsDestinationsModalOpen } = useApp();
+  const { currentScreen, switchNav, setSelectedDestination, setIsDestinationsModalOpen } = useApp();
 
   const handleCityClick = (city) => {
     setSelectedDestination(city);
@@ -13,8 +13,10 @@ export default function DesktopFooter() {
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const isHome = currentScreen === 'home';
+
   return (
-    <footer className="w-full bg-neutral-50 text-slate-700 border-t border-slate-200 mt-auto">
+    <footer className={`${isHome ? 'block pb-20 md:pb-0' : 'hidden md:block'} w-full bg-neutral-50 text-slate-700 border-t border-slate-200 mt-auto`}>
       {/* 1. Value Proposition Trust Bar */}
       <div className="border-b border-slate-200/90 py-5 bg-white">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-8">

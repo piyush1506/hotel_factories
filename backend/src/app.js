@@ -28,12 +28,12 @@ app.use(morgan('dev'));
 
 // Body parsing
 app.use(express.json({
-  limit: '1mb',
+  limit: '25mb',
   verify(req, res, buffer) {
     if (req.originalUrl.includes('/payments/webhook')) req.rawBody = buffer;
   }
 }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
 // Root welcome
 app.get('/', (req, res) => {
@@ -49,7 +49,8 @@ app.get('/', (req, res) => {
       payments: '/api/v1/payments',
       payouts: '/api/v1/payouts',
       admin: '/api/v1/admin',
-      hotelier: '/api/v1/hotelier'
+      hotelier: '/api/v1/hotelier',
+      upload: '/api/v1/upload'
     }
   });
 });

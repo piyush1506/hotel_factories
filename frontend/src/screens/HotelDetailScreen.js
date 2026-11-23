@@ -241,7 +241,7 @@ export default function HotelDetailScreen() {
     if (!hotels || hotels.length === 0 || !hotel?.city) return [];
     const city = (hotel.city || '').trim().toLowerCase();
     const currentId = hotel.id || hotel._id || activeHotelId;
-    
+
     // Find hotels in the same city
     return hotels.filter((h) => {
       const hId = h.id || h._id;
@@ -434,7 +434,7 @@ export default function HotelDetailScreen() {
 
   return (
     <div className="w-full bg-[#f8fafc] text-slate-900 pb-12">
-      
+
       {/* 1. Breadcrumbs Strip */}
       <div className="border-b border-slate-200/80 bg-white">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-8 py-2.5 flex items-center justify-between text-xs text-slate-500">
@@ -483,14 +483,11 @@ export default function HotelDetailScreen() {
       </div>
 
       <div className="max-w-[1440px] mx-auto px-4 sm:px-8 pt-5">
-        
+
         {/* 2. Top Header Bar (MakeMyTrip Style) */}
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
           <div>
             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-              <span className="px-2.5 py-0.5 rounded bg-amber-500 text-slate-950 font-black text-[10px] tracking-wider uppercase">
-                {hotel.featured ? 'GENIUS VIP PARTNER' : 'VERIFIED 3-STAR STAY'}
-              </span>
               <div className="flex items-center text-amber-400 text-xs">
                 {Array.from({ length: hotel.starRating || 3 }).map((_, i) => (
                   <i key={i} className="fa-solid fa-star" />
@@ -523,14 +520,14 @@ export default function HotelDetailScreen() {
             <button
               type="button"
               onClick={() => toggleFavorite(hotelId)}
-              className={`px-3 py-2 rounded-xl border flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
-                isFav
-                  ? 'bg-rose-50 border-rose-200 text-rose-600 shadow-2xs'
-                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-              }`}
+              className={`w-9 h-9 rounded-xl border flex items-center justify-center text-xs font-bold transition-all cursor-pointer ${isFav
+                ? 'bg-rose-50 border-rose-200 text-rose-600 shadow-2xs'
+                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
+              title={isFav ? 'Saved in Wishlist' : 'Add to Wishlist'}
+              aria-label={isFav ? 'Saved in Wishlist' : 'Add to Wishlist'}
             >
               <i className={`${isFav ? 'fa-solid text-rose-500' : 'fa-regular'} fa-heart text-sm`} />
-              <span>{isFav ? 'Saved in Wishlist' : 'Add to Wishlist'}</span>
             </button>
 
             <button
@@ -791,11 +788,10 @@ export default function HotelDetailScreen() {
               <button
                 key={tab.id}
                 onClick={() => { setActiveTab(tab.id); tab.action(); }}
-                className={`pb-3 border-b-2 whitespace-nowrap px-2 transition-all cursor-pointer ${
-                  activeTab === tab.id
-                    ? 'border-[#0ea5e9] text-[#0ea5e9] font-extrabold'
-                    : 'border-transparent text-slate-500 hover:text-slate-900'
-                }`}
+                className={`pb-3 border-b-2 whitespace-nowrap px-2 transition-all cursor-pointer ${activeTab === tab.id
+                  ? 'border-[#0ea5e9] text-[#0ea5e9] font-extrabold'
+                  : 'border-transparent text-slate-500 hover:text-slate-900'
+                  }`}
               >
                 {tab.label}
               </button>
@@ -803,104 +799,7 @@ export default function HotelDetailScreen() {
           </div>
         </div>
 
-        {/* 5. Property Highlights Strip */}
-        <section className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs mb-6 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-          <div
-            onClick={() => showToast(`${hotel?.name || 'Hotel'} is an officially verified partner with inspected hygiene & safety standards.`)}
-            className="flex items-center gap-3 p-2 -m-2 rounded-xl hover:bg-slate-50 transition cursor-pointer group"
-            title="Click to learn about partner verification"
-          >
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center text-sm shrink-0 group-hover:scale-105 transition-transform">
-              <i className="fa-solid fa-shield-halved" />
-            </div>
-            <div className="min-w-0">
-              <strong className="block text-slate-900 font-bold truncate">
-                {hotel?.isVerified ? 'Verified Partner' : 'Official Stay'}
-              </strong>
-              <span className="text-slate-500 text-[11px] block truncate">
-                {hotel?.verificationStatus === 'APPROVED' ? 'Inspected hygiene & safety' : 'Hotel Factories certified'}
-              </span>
-            </div>
-          </div>
 
-          <div
-            onClick={scrollToPolicies}
-            className="flex items-center gap-3 p-2 -m-2 rounded-xl hover:bg-slate-50 transition cursor-pointer group"
-            title={hotel?.cancellationPolicy?.summary || hotel?.policies?.cancellation || 'Hotel cancellation policy'}
-          >
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm shrink-0 group-hover:scale-105 transition-transform ${
-              hotel?.cancellationPolicy?.refundable
-                ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                : 'bg-amber-50 text-amber-800 border border-amber-200'
-            }`}>
-              <i className={hotel?.cancellationPolicy?.refundable ? 'fa-solid fa-clock-rotate-left' : 'fa-solid fa-ban'} />
-            </div>
-            <div className="min-w-0">
-              <strong className="block text-slate-900 font-bold truncate">
-                {hotel?.cancellationPolicy?.refundable
-                  ? (hotel?.cancellationPolicy?.badgeText || 'Cancellation Available')
-                  : 'Non-refundable'}
-              </strong>
-              <span className="text-slate-500 text-[11px] block truncate">
-                {hotel?.cancellationPolicy?.summary || hotel?.policies?.cancellation || 'Hotel specific policy applies'}
-              </span>
-            </div>
-          </div>
-
-          <div
-            onClick={() => setShowReviewsModal(true)}
-            className="flex items-center gap-3 p-2 -m-2 rounded-xl hover:bg-slate-50 transition cursor-pointer group"
-            title="Click to view verified guest reviews & experience ratings"
-          >
-            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center text-sm shrink-0 group-hover:scale-105 transition-transform">
-              <i className="fa-solid fa-star" />
-            </div>
-            <div className="min-w-0">
-              <strong className="block text-slate-900 font-bold truncate">
-                {scoreOutOf10}/10 Rating
-              </strong>
-              <span className="text-slate-500 text-[11px] block truncate group-hover:text-amber-700 transition-colors">
-                {reviewsCount} verified reviews
-              </span>
-            </div>
-          </div>
-
-          <div
-            onClick={scrollToRooms}
-            className="flex items-center gap-3 p-2 -m-2 rounded-xl hover:bg-slate-50 transition cursor-pointer group"
-            title="Click to jump to room booking"
-          >
-            <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center text-sm shrink-0 group-hover:scale-105 transition-transform">
-              <i className="fa-solid fa-bolt" />
-            </div>
-            <div className="min-w-0">
-              <strong className="block text-slate-900 font-bold truncate">Instant Confirmation</strong>
-              <span className="text-slate-500 text-[11px] block truncate">
-                {hotel?.rooms?.length ? `${hotel.rooms.length} room types available` : 'Direct hotel vouchers'}
-              </span>
-            </div>
-          </div>
-        </section>
-
-        {/* Direct Partner Guarantee Banner */}
-        <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200/80 flex items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center text-sm shrink-0">
-              <i className="fa-solid fa-shield-check text-base" />
-            </div>
-            <div>
-              <strong className="block text-xs sm:text-sm font-bold text-zinc-900 leading-tight">
-                Direct Partner Guarantee · Best Rate Guaranteed
-              </strong>
-              <span className="block text-[11px] text-zinc-500 mt-0.5">
-                Official verified inventory directly with {hotel.name}. Instant voucher confirmation.
-              </span>
-            </div>
-          </div>
-          <span className="px-2.5 py-1 rounded-md bg-white border border-zinc-200 text-zinc-800 font-bold text-[10px] tracking-wider uppercase shrink-0 shadow-2xs">
-            Official Partner
-          </span>
-        </div>
 
         {/* 7. Dates & Search Modification Strip */}
         <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-xs flex flex-wrap items-center justify-between gap-3 mb-6 text-xs">
@@ -1000,7 +899,7 @@ export default function HotelDetailScreen() {
 
                           {/* Amenity Pills matching Screenshot */}
                           <div className="flex flex-wrap gap-1.5 mt-2.5">
-                            {(combo.amenities || ['Charging Points', 'Blanket', 'Blackout curtains', 'Sofa']).map((tag) => (
+                            {(combo.amenities || combo.features || (Array.isArray(hotel.amenities) ? hotel.amenities.slice(0, 4) : [])).map((tag) => (
                               <span
                                 key={tag}
                                 className="text-[11px] bg-white border border-slate-200 text-slate-700 px-2.5 py-0.5 rounded-full shadow-2xs font-medium"
@@ -1076,28 +975,27 @@ export default function HotelDetailScreen() {
           </div>
 
           {/* Table Container */}
-          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
-            {/* Table Header Row - Clean Slate / Coral Theme */}
-            <div className="hidden lg:grid grid-cols-12 bg-slate-50/90 border-b border-slate-200/90 text-slate-600 text-[11px] font-extrabold uppercase tracking-wider py-3.5 px-6 gap-4">
-              <div className="col-span-3">Room Photos</div>
-              <div className="col-span-1 text-center">Sleeps</div>
-              <div className="col-span-4">Room Type & Details</div>
+          <div className="space-y-3.5 lg:space-y-0 lg:rounded-md lg:border lg:border-slate-200/90 lg:bg-white lg:shadow-2xs lg:divide-y lg:divide-slate-100 lg:overflow-hidden">
+            {/* Table Header Row (Desktop Only) */}
+            <div className="hidden lg:grid grid-cols-12 bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-bold uppercase tracking-wider py-2.5 px-4 gap-4">
+              <div className="col-span-3">Room Category</div>
+              <div className="col-span-5">Features &amp; Inclusions</div>
               <div className="col-span-2 text-right">Price ({nights} {nights === 1 ? 'Night' : 'Nights'})</div>
-              <div className="col-span-2 text-center">Select Room</div>
+              <div className="col-span-2 text-right">Reserve</div>
             </div>
 
             {/* Dynamic Rooms Rows */}
             {standardRooms.length === 0 ? (
-              <div className="p-10 text-center text-slate-500">
-                <i className="fa-solid fa-people-group text-3xl text-rose-500 mb-2" />
+              <div className="p-8 text-center text-slate-500 bg-white rounded-md border border-slate-200">
+                <i className="fa-solid fa-people-group text-2xl text-rose-500 mb-2" />
                 <h3 className="font-bold text-sm text-slate-800">
-                  {comboRooms.length > 0 
-                    ? 'All inventory at this property is in Group Dorms & Combos' 
+                  {comboRooms.length > 0
+                    ? 'All inventory at this property is in Group Dorms & Combos'
                     : 'No standard rooms listed for this property yet'}
                 </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  {comboRooms.length > 0 
-                    ? 'Please book your stay using the "Select Room Combo" section above.' 
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {comboRooms.length > 0
+                    ? 'Please book your stay using the "Select Room Combo" section above.'
                     : 'Please explore other verified stays or check back soon.'}
                 </p>
               </div>
@@ -1136,57 +1034,56 @@ export default function HotelDetailScreen() {
               return (
                 <div
                   key={room.id || idx}
-                  className={`grid grid-cols-1 lg:grid-cols-12 gap-4 p-5 lg:p-6 items-start ${
-                    idx % 2 === 1 ? 'bg-slate-50/50' : 'bg-white'
-                  } border-b border-slate-200 last:border-b-0 last:rounded-b-2xl`}
+                  className="rounded-md border border-slate-200/90 bg-white shadow-2xs overflow-hidden lg:rounded-none lg:border-0 lg:shadow-none hover:lg:bg-slate-50/50 transition-colors"
                 >
-                  {/* Col 1: Room Photo Carousel (3 cols) */}
-                  <div className="lg:col-span-3">
-                    {/* Room Image Carousel with Change Slide Buttons */}
-                    <div className="relative aspect-[16/10] rounded-xl overflow-hidden bg-slate-100 shadow-2xs group/img select-none">
+                  {/* ========================================================= */}
+                  {/* 1. MOBILE LUXURY ROOM CARD (Marriott / Taj / Hyatt Style) */}
+                  {/* ========================================================= */}
+                  <div className="lg:hidden flex flex-col">
+                    {/* Top Image Banner with Carousel */}
+                    <div className="relative h-44 sm:h-52 w-full bg-slate-100 overflow-hidden group/img select-none">
                       <img
                         src={currentImage}
                         alt={`${room.name} - Photo ${activeSlide + 1}`}
-                        className="w-full h-full object-cover transition-all duration-300 group-hover/img:scale-105"
+                        className="w-full h-full object-cover"
+                        loading="lazy"
                       />
-                      <span className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/85 text-white text-[10px] font-bold uppercase tracking-wider backdrop-blur-xs shadow-xs z-10">
-                        {room.badge || (idx === 0 ? 'Best Seller' : 'Spacious Suite')}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+
+                      {/* Floating Category Badge */}
+                      <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-sm bg-black/80 text-white text-[10px] font-bold uppercase tracking-wider backdrop-blur-xs z-10">
+                        {room.badge || (idx === 0 ? 'Best Seller' : 'Luxury Stay')}
                       </span>
 
-                      {/* Image Count Pill Badge */}
+                      {/* Photo Count Pill */}
                       {roomImages.length > 1 && (
-                        <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-xs text-white text-[10px] font-bold tracking-wider z-10 inline-flex items-center gap-1 shadow-xs">
+                        <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-sm bg-black/60 backdrop-blur-xs text-white text-[10px] font-semibold tracking-wider z-10 inline-flex items-center gap-1 shadow-xs">
                           <i className="fa-regular fa-image text-[9px]" />
                           <span>{activeSlide + 1}/{roomImages.length}</span>
                         </span>
                       )}
 
-                      {/* Change Slide Controls */}
+                      {/* Slide Controls */}
                       {roomImages.length > 1 && (
                         <>
-                          {/* Previous Slide Button */}
                           <button
                             type="button"
                             onClick={(e) => handlePrevSlide(rId, roomImages.length, e)}
-                            className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white/90 hover:bg-white text-slate-900 hover:text-black flex items-center justify-center text-xs shadow-md backdrop-blur-xs transition-all duration-200 z-10 cursor-pointer active:scale-95 opacity-90 sm:opacity-0 sm:group-hover/img:opacity-100 hover:scale-110"
-                            aria-label="Previous room photo"
-                            title="Previous photo"
+                            className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white/90 hover:bg-white text-slate-800 flex items-center justify-center text-xs shadow-md z-10 cursor-pointer active:scale-95"
+                            aria-label="Previous photo"
                           >
-                            <i className="fa-solid fa-chevron-left text-[11px]" />
+                            <i className="fa-solid fa-chevron-left text-[10px]" />
                           </button>
-
-                          {/* Next Slide Button */}
                           <button
                             type="button"
                             onClick={(e) => handleNextSlide(rId, roomImages.length, e)}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white/90 hover:bg-white text-slate-900 hover:text-black flex items-center justify-center text-xs shadow-md backdrop-blur-xs transition-all duration-200 z-10 cursor-pointer active:scale-95 opacity-90 sm:opacity-0 sm:group-hover/img:opacity-100 hover:scale-110"
-                            aria-label="Next room photo"
-                            title="Next photo"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white/90 hover:bg-white text-slate-800 flex items-center justify-center text-xs shadow-md z-10 cursor-pointer active:scale-95"
+                            aria-label="Next photo"
                           >
-                            <i className="fa-solid fa-chevron-right text-[11px]" />
+                            <i className="fa-solid fa-chevron-right text-[10px]" />
                           </button>
 
-                          {/* Dot Navigation Indicators */}
+                          {/* Dots */}
                           <div className="absolute bottom-2 inset-x-0 flex items-center justify-center gap-1.5 z-10 pointer-events-auto">
                             {roomImages.map((_, dotIdx) => (
                               <button
@@ -1195,177 +1092,334 @@ export default function HotelDetailScreen() {
                                 onClick={(e) => handleSelectSlide(rId, dotIdx, e)}
                                 className={`transition-all duration-300 rounded-full cursor-pointer ${
                                   dotIdx === activeSlide
-                                    ? 'w-4 h-1.5 bg-white shadow-xs'
-                                    : 'w-1.5 h-1.5 bg-white/60 hover:bg-white/90'
-                                }`}
-                                aria-label={`Jump to photo ${dotIdx + 1}`}
-                              />
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Col 2: Sleeps (1 col on desktop, hidden on mobile) */}
-                  <div className="hidden lg:block lg:col-span-1 text-center pt-2">
-                    <div className="inline-flex items-center justify-center gap-1.5 text-zinc-800 text-xs font-bold bg-slate-100/90 px-2.5 py-1 rounded-lg">
-                      <i className="fa-solid fa-user-group text-[11px] text-zinc-500" />
-                      <span>{sleepInfo.capAdults}</span>
-                    </div>
-                    <span className="text-[10px] text-slate-400 block mt-0.5 font-medium">Guests</span>
-                  </div>
-
-                  {/* Col 3: Room Type, Details & Benefits (4 cols) */}
-                  <div className="lg:col-span-4 space-y-3 pt-0 sm:pt-1 text-xs">
-                    {/* Room Name, Size & Bed Details */}
-                    <div>
-                      <div className="flex items-start justify-between gap-2 flex-wrap">
-                        <h3 className="font-bold text-base sm:text-lg text-slate-900 leading-snug">
-                          {room.name}
-                        </h3>
-                        {/* Mobile Sleeps Badge */}
-                        <div className="lg:hidden inline-flex items-center gap-1.5 text-zinc-800 text-xs font-bold bg-slate-100 px-2.5 py-1 rounded-lg shrink-0">
-                          <i className="fa-solid fa-user-group text-[10px] text-zinc-500" />
-                          <span>{sleepInfo.capAdults} Guests</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-xs text-slate-500 mt-1.5 flex-wrap">
-                        <span className="inline-flex items-center gap-1">
-                          <i className="fa-solid fa-ruler-combined text-[11px] text-slate-400" />
-                          {room.size || '52 m² / 560 sq ft'}
-                        </span>
-                        <span className="text-slate-300">•</span>
-                        <span className="inline-flex items-center gap-1">
-                          <i className="fa-solid fa-bed text-[11px] text-slate-400" />
-                          {room.bedType || '1 King Bed'}
-                        </span>
-                        {room.isCombo && (
-                          <>
-                            <span className="text-slate-300">•</span>
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold">
-                              <i className="fa-solid fa-check text-[9px] text-emerald-600" />
-                              <span>Accommodates all 5 in 1 combo</span>
-                            </span>
+                                    ? 'w-4 h-1 bg-white shadow-xs'
+                                    : 'w-1 h-1 bg-white/60'
+                                    }`}
+                                  aria-label={`Jump to photo ${dotIdx + 1}`}
+                                />
+                              ))}
+                            </div>
                           </>
                         )}
                       </div>
+
+                    {/* Mobile Card Content */}
+                    <div className="p-4 space-y-3">
+                      {/* Room Title */}
+                      <div>
+                        <h3 className="font-extrabold text-base sm:text-lg text-slate-950 leading-snug tracking-tight">
+                          {room.name}
+                        </h3>
+
+                        {/* Single, High-Contrast Clean Specs Row */}
+                        <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 mt-1.5 flex-wrap">
+                          <span className="inline-flex items-center gap-1.5 bg-slate-100 px-2 py-0.5 rounded text-slate-800">
+                            <i className="fa-solid fa-ruler-combined text-[11px] text-slate-600" />
+                            {room.size || '52 m² / 560 sq ft'}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 bg-slate-100 px-2 py-0.5 rounded text-slate-800">
+                            <i className="fa-solid fa-bed text-[11px] text-slate-600" />
+                            {room.bedType || '1 King Bed'}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 bg-slate-100 px-2 py-0.5 rounded text-slate-800">
+                            <i className="fa-solid fa-user-group text-[11px] text-slate-600" />
+                            Max {sleepInfo.capAdults} Guests
+                          </span>
+                          {room.isCombo && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-300 text-xs font-bold">
+                              <i className="fa-solid fa-check text-emerald-600 text-[10px]" />
+                              Accommodates all 5 in 1 combo
+                            </span>
+                          )}
+                        </div>
+
+                        {sleepInfo.warning && (
+                          <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-50 text-amber-900 border border-amber-300 text-xs font-semibold max-w-full">
+                            <i className="fa-solid fa-circle-info text-amber-700 text-xs shrink-0" />
+                            <span>{sleepInfo.warning}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Horizontal Luxury Inclusions Badges (Dynamic from Room & Hotel Policies) */}
+                      {(() => {
+                        const activeRoomPolicy = room.cancellationPolicy || hotel?.cancellationPolicy;
+                        const isRefundable = activeRoomPolicy?.refundable !== false && String(activeRoomPolicy?.type || '').toUpperCase() !== 'NON_REFUNDABLE';
+                        const hasBreakfast = room.freeBreakfast || (Array.isArray(room.amenities) && room.amenities.some(a => a.toLowerCase().includes('breakfast')));
+                        const allowsPayAtHotel = hotel?.allowPayAtHotel !== false && room.allowPayAtHotel !== false;
+
+                        return (
+                          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold border ${
+                              hasBreakfast 
+                                ? 'bg-emerald-50 text-emerald-900 border-emerald-300 shadow-2xs' 
+                                : 'bg-slate-100 text-slate-700 border-slate-200'
+                            }`}>
+                              <i className={`fa-solid ${hasBreakfast ? 'fa-utensils text-emerald-700' : 'fa-mug-hot text-slate-500'} text-[11px]`} />
+                              <span>{hasBreakfast ? 'Breakfast Included' : 'Breakfast Available'}</span>
+                            </span>
+
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold border ${
+                              isRefundable 
+                                ? 'bg-sky-50 text-sky-950 border-sky-300 shadow-2xs' 
+                                : 'bg-zinc-100 text-zinc-700 border-zinc-200'
+                            }`}>
+                              <i className={`fa-solid ${isRefundable ? 'fa-clock-rotate-left text-sky-700' : 'fa-ban text-zinc-500'} text-[11px]`} />
+                              <span>{isRefundable ? (activeRoomPolicy?.badgeText || (activeRoomPolicy?.windowHours ? `Free Cancellation (${activeRoomPolicy.windowHours}h)` : 'Free Cancellation')) : (activeRoomPolicy?.badgeText || 'Non-Refundable')}</span>
+                            </span>
+
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300 shadow-2xs">
+                              <i className={`fa-solid ${allowsPayAtHotel ? 'fa-building-columns text-slate-600' : 'fa-lock text-slate-600'} text-[11px]`} />
+                              <span>{allowsPayAtHotel ? 'Pay at Hotel' : 'Online Payment Secured'}</span>
+                            </span>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Mobile Bottom Pricing & CTA Row */}
+                      <div className="pt-3 border-t border-slate-200 flex items-center justify-between gap-2">
+                        {/* Price Area */}
+                        <div className="min-w-0">
+                          {multiNightOriginal > multiNightPrice && (
+                            <del className="text-xs text-slate-400 font-medium block">
+                              {formatPrice(multiNightOriginal * currentRoomCount)}
+                            </del>
+                          )}
+                          <div className="flex items-baseline gap-1.5 flex-wrap">
+                            <span className="text-2xl font-black text-slate-950 leading-tight tracking-tight">
+                              {formatPrice(totalPriceForRoom)}
+                            </span>
+                            <span className="text-xs font-bold text-slate-700">
+                              ({nights} {nights === 1 ? 'night' : 'nights'})
+                            </span>
+                          </div>
+                          <span className="text-xs font-medium text-slate-600 block mt-0.5">
+                            {formatPrice(basePrice)} / night · <span className="text-slate-500">+ taxes</span>
+                          </span>
+                        </div>
+
+                        {/* Room Count & Reserve Button */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="relative" data-room-dropdown="true">
+                            <button
+                              type="button"
+                              onClick={() => setOpenRoomDropdownId(openRoomDropdownId === room.id ? null : room.id)}
+                              className="h-9 px-3 rounded-md border-2 border-slate-300 bg-white hover:border-slate-800 text-xs font-bold text-slate-900 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                              aria-expanded={openRoomDropdownId === room.id}
+                            >
+                              <span>{currentRoomCount} {currentRoomCount === 1 ? 'Room' : 'Rooms'}</span>
+                              <i className="fa-solid fa-chevron-down text-[10px] text-slate-500" />
+                            </button>
+
+                            {openRoomDropdownId === room.id && (
+                              <div className="absolute bottom-full right-0 mb-1.5 z-50 bg-white border border-slate-200 rounded-md shadow-xl p-1.5 w-48 space-y-1">
+                                <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 flex items-center justify-between">
+                                  <span>Rooms</span>
+                                  <span>Total</span>
+                                </div>
+                                {[1, 2, 3, 4, 5].map((count) => {
+                                  const isSelected = currentRoomCount === count;
+                                  return (
+                                    <button
+                                      key={count}
+                                      type="button"
+                                      onClick={() => {
+                                        setRoomCounts((prev) => ({ ...prev, [room.id]: count }));
+                                        setOpenRoomDropdownId(null);
+                                      }}
+                                      className={`w-full px-2.5 py-1.5 rounded text-xs flex items-center justify-between cursor-pointer font-semibold ${
+                                        isSelected ? 'bg-slate-950 text-white font-bold' : 'text-slate-800 hover:bg-slate-100'
+                                      }`}
+                                    >
+                                      <span>{count} {count === 1 ? 'Room' : 'Rooms'}</span>
+                                      <span className={isSelected ? 'text-slate-200' : 'text-slate-600'}>
+                                        {formatPrice(multiNightPrice * count)}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleReserveRoom(room, currentImage)}
+                            className="h-9 px-4.5 rounded-md bg-slate-950 hover:bg-black active:scale-[0.98] text-white text-xs font-extrabold shadow-sm flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                          >
+                            <span>Reserve</span>
+                            <i className="fa-solid fa-arrow-right text-[11px]" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ========================================================= */}
+                  {/* 2. DESKTOP LUXURY COMPACT ROW (~130px–140px Height)      */}
+                  {/* ========================================================= */}
+                  <div className="hidden lg:grid grid-cols-12 gap-4 p-3.5 sm:p-4 items-center">
+                    {/* Col 1: Compact Thumbnail (3 cols) */}
+                    <div className="col-span-3">
+                      <div className="relative h-28 sm:h-32 w-full rounded-md overflow-hidden bg-slate-100 group/img select-none border border-slate-100 shadow-2xs">
+                        <img
+                          src={currentImage}
+                          alt={`${room.name} - Photo ${activeSlide + 1}`}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-105"
+                          loading="lazy"
+                        />
+                        <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-sm bg-black/80 text-white text-[9px] font-bold uppercase tracking-wider backdrop-blur-xs z-10">
+                          {room.badge || (idx === 0 ? 'Best Seller' : 'Luxury Stay')}
+                        </span>
+
+                        {roomImages.length > 1 && (
+                          <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-sm bg-black/60 backdrop-blur-xs text-white text-[9px] font-semibold tracking-wider z-10 inline-flex items-center gap-1">
+                            <i className="fa-regular fa-image text-[8px]" />
+                            <span>{activeSlide + 1}/{roomImages.length}</span>
+                          </span>
+                        )}
+
+                        {roomImages.length > 1 && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={(e) => handlePrevSlide(rId, roomImages.length, e)}
+                              className="absolute left-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white/90 hover:bg-white text-slate-800 flex items-center justify-center text-[10px] shadow-sm backdrop-blur-xs transition-all z-10 cursor-pointer active:scale-95 opacity-0 group-hover/img:opacity-100"
+                              aria-label="Previous room photo"
+                            >
+                              <i className="fa-solid fa-chevron-left text-[9px]" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => handleNextSlide(rId, roomImages.length, e)}
+                              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white/90 hover:bg-white text-slate-800 flex items-center justify-center text-[10px] shadow-sm backdrop-blur-xs transition-all z-10 cursor-pointer active:scale-95 opacity-0 group-hover/img:opacity-100"
+                              aria-label="Next room photo"
+                            >
+                              <i className="fa-solid fa-chevron-right text-[9px]" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Col 2: Details & Inclusions (5 cols) */}
+                    <div className="col-span-5 min-w-0 space-y-2">
+                      <h3 className="font-extrabold text-base sm:text-lg text-slate-950 leading-snug tracking-tight">
+                        {room.name}
+                      </h3>
+
+                      <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 flex-wrap">
+                        <span className="inline-flex items-center gap-1.5 bg-slate-100 px-2 py-0.5 rounded text-slate-800">
+                          <i className="fa-solid fa-ruler-combined text-[11px] text-slate-600" />
+                          {room.size || '52 m² / 560 sq ft'}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 bg-slate-100 px-2 py-0.5 rounded text-slate-800">
+                          <i className="fa-solid fa-bed text-[11px] text-slate-600" />
+                          {room.bedType || '1 King Bed'}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 bg-slate-100 px-2 py-0.5 rounded text-slate-800">
+                          <i className="fa-solid fa-user-group text-[11px] text-slate-600" />
+                          Max {sleepInfo.capAdults} Guests
+                        </span>
+                        {room.isCombo && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-300 text-xs font-bold">
+                            <i className="fa-solid fa-check text-emerald-600 text-[10px]" />
+                            Accommodates all 5 in 1 combo
+                          </span>
+                        )}
+                      </div>
+
+                      {(() => {
+                        const activeRoomPolicy = room.cancellationPolicy || hotel?.cancellationPolicy;
+                        const isRefundable = activeRoomPolicy?.refundable !== false && String(activeRoomPolicy?.type || '').toUpperCase() !== 'NON_REFUNDABLE';
+                        const hasBreakfast = room.freeBreakfast || (Array.isArray(room.amenities) && room.amenities.some(a => a.toLowerCase().includes('breakfast')));
+                        const allowsPayAtHotel = hotel?.allowPayAtHotel !== false && room.allowPayAtHotel !== false;
+
+                        return (
+                          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold border ${
+                              hasBreakfast 
+                                ? 'bg-emerald-50 text-emerald-900 border-emerald-300 shadow-2xs' 
+                                : 'bg-slate-100 text-slate-700 border-slate-200'
+                            }`}>
+                              <i className={`fa-solid ${hasBreakfast ? 'fa-utensils text-emerald-700' : 'fa-mug-hot text-slate-500'} text-[11px]`} />
+                              <span>{hasBreakfast ? 'Breakfast Included' : 'Breakfast Available'}</span>
+                            </span>
+
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold border ${
+                              isRefundable 
+                                ? 'bg-sky-50 text-sky-950 border-sky-300 shadow-2xs' 
+                                : 'bg-zinc-100 text-zinc-700 border-zinc-200'
+                            }`}>
+                              <i className={`fa-solid ${isRefundable ? 'fa-clock-rotate-left text-sky-700' : 'fa-ban text-zinc-500'} text-[11px]`} />
+                              <span>{isRefundable ? (activeRoomPolicy?.badgeText || (activeRoomPolicy?.windowHours ? `Free Cancellation (${activeRoomPolicy.windowHours}h)` : 'Free Cancellation')) : (activeRoomPolicy?.badgeText || 'Non-Refundable')}</span>
+                            </span>
+
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300 shadow-2xs">
+                              <i className={`fa-solid ${allowsPayAtHotel ? 'fa-building-columns text-slate-600' : 'fa-lock text-slate-600'} text-[11px]`} />
+                              <span>{allowsPayAtHotel ? 'Pay at Hotel' : 'Online Payment Secured'}</span>
+                            </span>
+                          </div>
+                        );
+                      })()}
+
                       {sleepInfo.warning && (
-                        <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-semibold max-w-full">
-                          <i className="fa-solid fa-circle-info text-amber-600 text-xs shrink-0" />
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-50 text-amber-900 border border-amber-300 text-xs font-semibold max-w-full">
+                          <i className="fa-solid fa-circle-info text-amber-700 text-xs shrink-0" />
                           <span>{sleepInfo.warning}</span>
                         </div>
                       )}
                     </div>
 
-                    {/* Included Benefits & Policies List */}
-                    <div className="space-y-2 pt-2 border-t border-slate-100">
-                      <div className="flex items-start gap-2">
-                        <i className="fa-solid fa-check text-[11px] text-zinc-900 mt-0.5 shrink-0" />
-                        <div>
-                          <span className="font-semibold text-zinc-900 block leading-tight">
-                            {room.freeBreakfast ? 'Breakfast included' : 'Breakfast available at property'}
-                          </span>
-                          <span className="text-[11px] text-zinc-500 block mt-0.5">Buffet &amp; continental options</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-2">
-                        <i className={`text-[11px] mt-0.5 shrink-0 ${
-                          hotel?.cancellationPolicy?.refundable ? 'fa-solid fa-clock-rotate-left text-emerald-600' : 'fa-solid fa-ban text-amber-600'
-                        }`} />
-                        <div>
-                          <span className="font-semibold text-zinc-900 block leading-tight">
-                            {hotel?.cancellationPolicy?.refundable
-                              ? (hotel?.cancellationPolicy?.badgeText || 'Cancellation available')
-                              : 'Non-refundable booking'}
-                          </span>
-                          <span className="text-[11px] text-zinc-500 block mt-0.5">
-                            {hotel?.cancellationPolicy?.summary || hotel?.policies?.cancellation || 'Policy determined by hotel'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-2">
-                        <i className="fa-solid fa-check text-[11px] text-zinc-900 mt-0.5 shrink-0" />
-                        <div>
-                          <span className="font-semibold text-zinc-900 block leading-tight">No prepayment needed</span>
-                          <span className="text-[11px] text-zinc-500 block mt-0.5">Pay at property during check-in</span>
-                        </div>
-                      </div>
-
-                      <div className="pt-0.5">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-100 text-zinc-700 text-[10px] font-semibold tracking-tight">
-                          <i className="fa-solid fa-tag text-[9px] text-zinc-400" />
-                          <span>Direct booking rate</span>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Col 4 & 5: Combined Price & Action Area (Responsive across Mobile & Desktop) */}
-                  <div className="lg:col-span-4 border-t lg:border-t-0 border-slate-100 pt-3 lg:pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 items-end">
-                    {/* Price Block */}
-                    <div className="text-left lg:text-right">
+                    {/* Col 3: Price Column (2 cols) */}
+                    <div className="col-span-2 text-right">
                       {multiNightOriginal > multiNightPrice && (
-                        <del className="text-xs text-zinc-400 font-medium block">
+                        <del className="text-xs text-slate-400 font-medium block">
                           {formatPrice(multiNightOriginal * currentRoomCount)}
                         </del>
                       )}
-                      <div className="text-2xl font-black text-zinc-900 leading-tight tracking-tight whitespace-nowrap">
+                      <div className="text-2xl font-black text-slate-950 leading-tight tracking-tight">
                         {formatPrice(totalPriceForRoom)}
                       </div>
-                      <span className="text-[11px] text-zinc-500 block mt-0.5">
-                        for {nights} {nights === 1 ? 'night' : 'nights'}
+                      <span className="text-xs font-bold text-slate-700 block mt-0.5">
+                        {nights} {nights === 1 ? 'night' : 'nights'}
                         {currentRoomCount > 1 ? ` · ${currentRoomCount} rooms` : ''}
                       </span>
-                      <span className="text-[10px] text-zinc-400 block mt-0.5">+ Taxes &amp; charges</span>
-                      <span className="text-[11px] font-semibold text-zinc-700 block mt-1">
+                      <span className="text-xs font-medium text-slate-600 block mt-0.5">
                         {formatPrice(basePrice)} / night
                       </span>
+                      <span className="text-[11px] text-slate-500 block mt-0.5">+ Taxes &amp; charges</span>
                     </div>
 
-                    {/* Select Room & Reserve CTA */}
-                    <div className="flex flex-col gap-2">
-                      <div className="w-full relative" data-room-dropdown="true">
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                            ROOMS:
-                          </label>
-                          <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded">
-                            {currentRoomCount} {currentRoomCount === 1 ? 'room' : 'rooms'}
-                          </span>
-                        </div>
-
-                        {/* Custom Minimalist Trigger Button */}
+                    {/* Col 4: Quantity & Reserve CTA (2 cols) */}
+                    <div className="col-span-2 flex flex-col gap-1.5 items-end justify-center">
+                      <div className="relative w-full" data-room-dropdown="true">
                         <button
                           type="button"
                           onClick={() => setOpenRoomDropdownId(openRoomDropdownId === room.id ? null : room.id)}
-                          className={`w-full px-3 py-2 rounded-xl border text-xs font-bold flex items-center justify-between transition-all cursor-pointer ${
+                          className={`w-full h-8 px-2.5 rounded-md border text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
                             openRoomDropdownId === room.id
-                              ? 'border-black ring-2 ring-black/10 bg-zinc-50 text-black shadow-xs'
-                              : 'border-zinc-300 hover:border-black bg-white text-slate-800 shadow-2xs'
+                              ? 'border-slate-900 ring-1 ring-slate-900 bg-slate-50 text-slate-900'
+                              : 'border-slate-300 hover:border-slate-500 bg-white text-slate-800 shadow-2xs'
                           }`}
                           aria-expanded={openRoomDropdownId === room.id}
                         >
                           <span className="flex items-center gap-1.5 truncate">
-                            <i className="fa-solid fa-door-open text-[11px] text-zinc-400" />
+                            <i className="fa-solid fa-door-open text-[10px] text-slate-400" />
                             <span>{currentRoomCount} {currentRoomCount === 1 ? 'Room' : 'Rooms'}</span>
                           </span>
                           <i
-                            className={`fa-solid fa-chevron-down text-[10px] text-zinc-400 transition-transform duration-200 ${
+                            className={`fa-solid fa-chevron-down text-[9px] text-slate-400 transition-transform duration-200 ${
                               openRoomDropdownId === room.id ? 'rotate-180 text-black' : ''
                             }`}
                           />
                         </button>
 
-                        {/* Custom Luxury Dropdown Popover */}
                         {openRoomDropdownId === room.id && (
-                          <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white border border-zinc-200/90 rounded-2xl shadow-xl shadow-black/10 p-1.5 space-y-1 backdrop-blur-md animate-in fade-in zoom-in-95 duration-150">
-                            <div className="px-2 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-100 mb-1 flex items-center justify-between">
-                              <span>Quantity</span>
-                              <span>Total Stay</span>
+                          <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-white border border-slate-200 rounded-md shadow-lg p-1 space-y-0.5 w-full min-w-[170px] backdrop-blur-md animate-in fade-in zoom-in-95 duration-150">
+                            <div className="px-2 py-0.5 text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-0.5 flex items-center justify-between">
+                              <span>Rooms</span>
+                              <span>Total</span>
                             </div>
                             {[1, 2, 3, 4, 5].map((count) => {
                               const isSelected = currentRoomCount === count;
@@ -1378,23 +1432,23 @@ export default function HotelDetailScreen() {
                                     setRoomCounts((prev) => ({ ...prev, [room.id]: count }));
                                     setOpenRoomDropdownId(null);
                                   }}
-                                  className={`w-full px-2.5 py-2 rounded-xl text-xs flex items-center justify-between transition-all cursor-pointer ${
+                                  className={`w-full px-2 py-1 rounded-sm text-xs flex items-center justify-between transition-all cursor-pointer ${
                                     isSelected
-                                      ? 'bg-[#0ea5e9] text-white font-bold shadow-xs'
-                                      : 'text-zinc-800 hover:bg-zinc-100 font-semibold'
+                                      ? 'bg-slate-900 text-white font-bold'
+                                      : 'text-slate-800 hover:bg-slate-100 font-medium'
                                   }`}
                                 >
-                                  <span className="flex items-center gap-2">
+                                  <span className="flex items-center gap-1.5">
                                     {isSelected ? (
-                                      <i className="fa-solid fa-check text-[10px] text-white" />
+                                      <i className="fa-solid fa-check text-[9px] text-white" />
                                     ) : (
-                                      <span className="w-2 h-2 rounded-full border border-zinc-300 inline-block" />
+                                      <span className="w-1.5 h-1.5 rounded-full border border-slate-300 inline-block" />
                                     )}
                                     <span>{count} {count === 1 ? 'Room' : 'Rooms'}</span>
                                   </span>
                                   <span
-                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                      isSelected ? 'bg-white/20 text-white' : 'bg-zinc-100 text-zinc-600'
+                                    className={`text-[10px] font-semibold px-1.5 py-0.2 rounded ${
+                                      isSelected ? 'bg-white/20 text-white' : 'text-slate-500'
                                     }`}
                                   >
                                     {formatPrice(total)}
@@ -1409,20 +1463,17 @@ export default function HotelDetailScreen() {
                       <button
                         type="button"
                         onClick={() => handleReserveRoom(room, currentImage)}
-                        className="w-full py-2.5 px-3 rounded-xl bg-[#0ea5e9] hover:bg-[#0284c7] active:scale-[0.98] text-white text-xs font-bold shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        className="w-full h-8 px-3 rounded-md bg-slate-900 hover:bg-black active:scale-[0.98] text-white text-xs font-bold shadow-xs hover:shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
                       >
-                        <span>I&#39;ll Reserve</span>
-                        <i className="fa-solid fa-chevron-right text-[10px]" />
+                        <span>Reserve</span>
+                        <i className="fa-solid fa-arrow-right text-[10px]" />
                       </button>
-                      <span className="text-[10px] text-slate-400 text-center block">Instant confirmation in 2 mins</span>
                     </div>
                   </div>
-
                 </div>
               );
-            })
-          )}
-
+              })
+            )}
           </div>
         </section>
 
@@ -1554,20 +1605,18 @@ export default function HotelDetailScreen() {
                   <span className="text-[10px] text-sky-600 font-bold flex items-center gap-1 shrink-0">
                     <span>{isLocationExpanded || isLocationHovered ? 'Hide' : 'Details'}</span>
                     <i
-                      className={`fa-solid fa-chevron-down text-[9px] transition-transform duration-200 ${
-                        isLocationExpanded || isLocationHovered ? 'rotate-180 text-sky-700' : ''
-                      }`}
+                      className={`fa-solid fa-chevron-down text-[9px] transition-transform duration-200 ${isLocationExpanded || isLocationHovered ? 'rotate-180 text-sky-700' : ''
+                        }`}
                     />
                   </span>
                 </button>
 
                 {/* Details Body: Shows when hovered OR clicked/expanded */}
                 <div
-                  className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                    isLocationExpanded || isLocationHovered
-                      ? 'max-h-[350px] opacity-100 pt-0.5'
-                      : 'max-h-0 opacity-0'
-                  }`}
+                  className={`transition-all duration-300 ease-in-out overflow-hidden ${isLocationExpanded || isLocationHovered
+                    ? 'max-h-[350px] opacity-100 pt-0.5'
+                    : 'max-h-0 opacity-0'
+                    }`}
                 >
                   <div className="divide-y divide-slate-200/70 text-xs">
                     <div className="flex items-center justify-between py-1.5 text-slate-700">
@@ -1720,11 +1769,14 @@ export default function HotelDetailScreen() {
                 <span>Accepted Payments</span>
               </div>
               <div className="flex-1 flex items-center gap-2 flex-wrap">
-                <span className="px-2.5 py-1 rounded-lg bg-slate-100 font-bold text-slate-700 border border-slate-200/70">UPI / QR</span>
-                <span className="px-2.5 py-1 rounded-lg bg-slate-100 font-bold text-slate-700 border border-slate-200/70">Visa / Mastercard</span>
-                <span className="px-2.5 py-1 rounded-lg bg-slate-100 font-bold text-slate-700 border border-slate-200/70">NetBanking</span>
-                <span className="px-2.5 py-1 rounded-lg bg-slate-100 font-bold text-slate-700 border border-slate-200/70">Razorpay Secured</span>
-                <span className="px-2.5 py-1 rounded-lg bg-slate-100 font-bold text-slate-700 border border-slate-200/70">Pay at Hotel</span>
+                {(Array.isArray(hotel?.paymentMethods) && hotel.paymentMethods.length > 0 
+                  ? hotel.paymentMethods 
+                  : ['UPI / QR', 'Cards (Visa / Mastercard)', 'NetBanking', ...(hotel?.allowPayAtHotel !== false ? ['Pay at Hotel'] : [])]
+                ).map((method, idx) => (
+                  <span key={idx} className="px-2.5 py-1 rounded-lg bg-slate-100 font-bold text-slate-700 border border-slate-200/70 text-xs">
+                    {method}
+                  </span>
+                ))}
               </div>
             </div>
           </div>
@@ -1824,20 +1876,16 @@ export default function HotelDetailScreen() {
                           <span className="truncate">{h.locality || h.city || 'India'}</span>
                         </div>
 
-                        <div className="mt-3.5 space-y-1.5 text-xs text-slate-600">
-                          <div className="flex items-center gap-2">
-                            <i className="fa-solid fa-snowflake text-cyan-600 text-xs shrink-0" />
-                            <span className="text-slate-700 font-medium truncate">
-                              {(h.amenities && h.amenities[0]) || 'Air Conditioning'}
-                            </span>
+                        {Array.isArray(h.amenities) && h.amenities.length > 0 && (
+                          <div className="mt-3.5 space-y-1.5 text-xs text-slate-600">
+                            {h.amenities.slice(0, 2).map((am, amIdx) => (
+                              <div key={amIdx} className="flex items-center gap-2">
+                                <i className="fa-solid fa-sparkles text-sky-600 text-xs shrink-0" />
+                                <span className="text-slate-700 font-medium truncate">{am}</span>
+                              </div>
+                            ))}
                           </div>
-                          <div className="flex items-center gap-2">
-                            <i className="fa-solid fa-wifi text-sky-600 text-xs shrink-0" />
-                            <span className="text-slate-700 font-medium truncate">
-                              {(h.amenities && (h.amenities[1] || h.amenities[2])) || 'Free High-Speed WiFi'}
-                            </span>
-                          </div>
-                        </div>
+                        )}
                       </div>
                     </div>
 

@@ -30,6 +30,13 @@ module.exports = {
   DB_TYPE: process.env.DB_TYPE || 'postgres',
   DATABASE_URL: process.env.DATABASE_URL || 'postgresql://postgres.ezmzwdewurflhavtpihg:j5xuHFP2l01cmqoc@aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres',
 
+  // Cloudinary Image Storage
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || '',
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || '',
+  CLOUDINARY_URL: process.env.CLOUDINARY_URL || '',
+  CLOUDINARY_FOLDER: process.env.CLOUDINARY_FOLDER || 'hotel_factories',
+
   // Seed Account Credentials (read from .env, never hardcoded)
   ADMIN_NAME: process.env.ADMIN_NAME || 'Admin',
   ADMIN_EMAIL: process.env.ADMIN_EMAIL || '',

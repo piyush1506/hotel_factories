@@ -64,44 +64,77 @@ export default function RoomCard({ hotel, room }) {
   const basePrice = getRoomPrice(room);
   const rawOriginal = Number(room.originalPrice || Math.round(basePrice * 1.25));
 
-  // Rate Plan Options (MakeMyTrip / OTA Style)
+  // Dynamic Room / Property Cancellation & Refund Policy
+  const roomPolicy = room?.cancellationPolicy || hotel?.cancellationPolicy;
   const cancellationNote = useMemo(() => {
-    const policy = hotel?.cancellationPolicy;
-    if (policy) {
-      if (policy.refundable) {
-        return policy.badgeText || (policy.windowHours ? `Refundable (${policy.windowHours}h window)` : 'Refundable stay');
+    if (roomPolicy) {
+      if (roomPolicy.refundable !== false && String(roomPolicy.type || '').toUpperCase() !== 'NON_REFUNDABLE') {
+        return roomPolicy.badgeText || (roomPolicy.windowHours ? `Refundable (${roomPolicy.windowHours}h window)` : 'Refundable stay');
       }
-      return 'Non-Refundable (Hotel Policy)';
+      return roomPolicy.badgeText || 'Non-Refundable (Property Policy)';
     }
-    return hotel?.policies?.cancellation || 'Hotel terms apply';
-  }, [hotel?.cancellationPolicy, hotel?.policies]);
+    return hotel?.policies?.cancellation || 'Property cancellation terms apply';
+  }, [roomPolicy, hotel?.policies]);
 
-  const ratePlans = useMemo(() => [
-    {
-      id: 'breakfast',
-      name: 'Free Breakfast Included',
-      description: 'Daily buffet breakfast at the fine-dining restaurant',
-      priceDelta: 0,
-      badge: 'RECOMMENDED',
-      cancellation: cancellationNote
-    },
-    {
-      id: 'half_board',
-      name: 'Breakfast + Dinner Included',
-      description: 'Lavish chef-curated dinner buffet & morning breakfast',
-      priceDelta: Math.max(800, Math.round(basePrice * 0.16)),
-      badge: 'BEST VALUE',
-      cancellation: cancellationNote
-    },
-    {
-      id: 'room_only',
-      name: 'Room Only (No Meals)',
-      description: 'Flexible stay with option to order a-la-carte',
-      priceDelta: -Math.min(500, Math.round(basePrice * 0.08)),
-      badge: 'ECONOMY',
-      cancellation: cancellationNote
+  // Dynamic Rate Plan Options based on room package configuration
+  const ratePlans = useMemo(() => {
+    if (Array.isArray(room.ratePlans) && room.ratePlans.length > 0) {
+      return room.ratePlans.map((p) => ({
+        ...p,
+        cancellation: p.cancellation || cancellationNote
+      }));
     }
-  ], [basePrice, cancellationNote]);
+    if (room.freeBreakfast) {
+      return [
+        {
+          id: 'breakfast',
+          name: 'Breakfast Included',
+          description: 'Daily buffet breakfast included with your reservation',
+          priceDelta: 0,
+          badge: 'INCLUDED',
+          cancellation: cancellationNote
+        },
+        {
+          id: 'half_board',
+          name: 'Breakfast + Dinner Included',
+          description: 'Lavish dinner buffet & complimentary morning breakfast',
+          priceDelta: Math.max(800, Math.round(basePrice * 0.16)),
+          badge: 'BEST VALUE',
+          cancellation: cancellationNote
+        }
+      ];
+    }
+    return [
+      {
+        id: 'room_only',
+        name: 'Room Only (Standard)',
+        description: 'Flexible stay with option to order dining a-la-carte',
+        priceDelta: 0,
+        badge: 'ECONOMY',
+        cancellation: cancellationNote
+      },
+      {
+        id: 'breakfast_addon',
+        name: 'Room + Breakfast Buffet',
+        description: 'Chef breakfast spread added for all registered guests',
+        priceDelta: Math.max(450, Math.round(basePrice * 0.12)),
+        badge: 'RECOMMENDED',
+        cancellation: cancellationNote
+      }
+    ];
+  }, [room.ratePlans, room.freeBreakfast, basePrice, cancellationNote]);
+
+  // Dynamic Combined Room Amenities & In-Suite Facilities
+  const dynamicRoomAmenities = useMemo(() => {
+    const list = [];
+    if (Array.isArray(room.amenities)) list.push(...room.amenities);
+    if (Array.isArray(room.facilities)) list.push(...room.facilities);
+    if (Array.isArray(room.features)) list.push(...room.features);
+    if (list.length === 0 && Array.isArray(hotel?.amenities)) {
+      list.push(...hotel.amenities);
+    }
+    return Array.from(new Set(list.filter(Boolean)));
+  }, [room.amenities, room.facilities, room.features, hotel?.amenities]);
 
   const selectedPlan = ratePlans.find((p) => p.id === selectedPlanId) || ratePlans[0];
   const finalPrice = Math.max(500, basePrice + selectedPlan.priceDelta);
@@ -302,44 +335,43 @@ export default function RoomCard({ hotel, room }) {
 
             <div className="inclusion-divider" />
 
-            <div className={`inclusion-item cancellation-inclusion ${hotel?.cancellationPolicy?.refundable ? 'bg-sky-50/70 border-sky-100' : 'bg-amber-50/70 border-amber-100'}`}>
-              <div className={`inclusion-icon-wrap ${hotel?.cancellationPolicy?.refundable ? 'bg-sky-100 text-sky-700' : 'bg-amber-100 text-amber-700'}`}>
-                <i className={`fa-solid ${hotel?.cancellationPolicy?.refundable ? 'fa-shield-halved' : 'fa-ban'} text-xs`} />
+            <div className={`inclusion-item cancellation-inclusion ${roomPolicy?.refundable !== false ? 'bg-sky-50/70 border-sky-100' : 'bg-amber-50/70 border-amber-100'}`}>
+              <div className={`inclusion-icon-wrap ${roomPolicy?.refundable !== false ? 'bg-sky-100 text-sky-700' : 'bg-amber-100 text-amber-700'}`}>
+                <i className={`fa-solid ${roomPolicy?.refundable !== false ? 'fa-shield-halved' : 'fa-ban'} text-xs`} />
               </div>
               <div className="inclusion-text">
-                <strong className={hotel?.cancellationPolicy?.refundable ? 'text-sky-900' : 'text-amber-900'}>
-                  {hotel?.cancellationPolicy?.badgeText || (hotel?.cancellationPolicy?.refundable ? 'Refundable Booking' : 'Strict Non-Refundable')}
+                <strong className={roomPolicy?.refundable !== false ? 'text-sky-900' : 'text-amber-900'}>
+                  {roomPolicy?.badgeText || (roomPolicy?.refundable !== false ? 'Refundable Booking' : 'Non-Refundable')}
                 </strong>
-                <p className={`${hotel?.cancellationPolicy?.refundable ? 'text-sky-700' : 'text-amber-700'} text-[11px]`}>
-                  {hotel?.cancellationPolicy?.summary || (hotel?.cancellationPolicy?.refundable ? 'Subject to individual property cancellation window' : 'No refunds on cancellation or no-show (Hotel policy)')}
+                <p className={`${roomPolicy?.refundable !== false ? 'text-sky-700' : 'text-amber-700'} text-[11px]`}>
+                  {roomPolicy?.summary || (roomPolicy?.refundable !== false ? 'Subject to individual property cancellation window' : 'No refunds on cancellation or no-show (Property policy)')}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Popular Amenities Chips */}
-          <div className="room-amenities-wrap">
-            <div className="room-amenities-chips">
-              {(room.amenities && room.amenities.length > 0
-                ? room.amenities.slice(0, 5)
-                : ['High-Speed WiFi', 'Air Conditioning', 'En-Suite Bathroom', 'Smart TV', 'Tea/Coffee Maker']
-              ).map((amenity, idx) => (
-                <span key={idx} className="room-amenity-chip">
-                  <i className={`fa-solid ${getAmenityIcon(amenity)} text-[11px] text-slate-500`} />
-                  <span>{amenity}</span>
-                </span>
-              ))}
-            </div>
+          {/* Dynamic Room Amenities Chips */}
+          {dynamicRoomAmenities.length > 0 && (
+            <div className="room-amenities-wrap">
+              <div className="room-amenities-chips">
+                {dynamicRoomAmenities.slice(0, 5).map((amenity, idx) => (
+                  <span key={idx} className="room-amenity-chip">
+                    <i className={`fa-solid ${getAmenityIcon(amenity)} text-[11px] text-slate-500`} />
+                    <span>{amenity}</span>
+                  </span>
+                ))}
+              </div>
 
-            <button
-              type="button"
-              className="room-details-trigger-btn"
-              onClick={() => setIsDetailModalOpen(true)}
-            >
-              <span>View all room amenities & rules</span>
-              <i className="fa-solid fa-chevron-right text-[10px]" />
-            </button>
-          </div>
+              <button
+                type="button"
+                className="room-details-trigger-btn"
+                onClick={() => setIsDetailModalOpen(true)}
+              >
+                <span>View all room amenities &amp; rules</span>
+                <i className="fa-solid fa-chevron-right text-[10px]" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ================= COLUMN 3: RATE OPTIONS, PRICING & CTA ================= */}
@@ -551,56 +583,47 @@ export default function RoomCard({ hotel, room }) {
                 </div>
               </div>
 
-              {/* Categorized Room Amenities */}
+              {/* Categorized Room Amenities & Facilities (100% Dynamic) */}
               <div className="space-y-4">
                 <h4 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
                   <i className="fa-solid fa-list-check text-brand text-sm" />
-                  Room Amenities & In-Suite Facilities
+                  Room Amenities &amp; In-Suite Facilities ({dynamicRoomAmenities.length})
                 </h4>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {(room.amenities && room.amenities.length > 0
-                    ? room.amenities
-                    : [
-                        'High-Speed Wi-Fi',
-                        'Individually Controlled AC',
-                        'En-suite Marble Bathroom',
-                        'Rain Shower & Free Toiletries',
-                        '55" 4K Smart TV',
-                        'Electronic Safety Deposit Box',
-                        'Complimentary Tea & Coffee Maker',
-                        '24-Hour Room Service',
-                        'Plush Bathrobes & Slippers'
-                      ]
-                  ).map((amenity, idx) => (
-                    <div key={idx} className="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-50 border border-slate-100 text-xs font-semibold text-slate-700">
-                      <i className={`fa-solid ${getAmenityIcon(amenity)} text-brand text-sm`} />
-                      <span>{amenity}</span>
-                    </div>
-                  ))}
-                </div>
+                {dynamicRoomAmenities.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    {dynamicRoomAmenities.map((amenity, idx) => (
+                      <div key={idx} className="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-50 border border-slate-100 text-xs font-semibold text-slate-700">
+                        <i className={`fa-solid ${getAmenityIcon(amenity)} text-brand text-sm`} />
+                        <span>{amenity}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500 italic">Verified essentials &amp; standard amenities provided upon check-in.</p>
+                )}
               </div>
 
-              {/* Room Rules & Guarantees */}
-              <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-100 space-y-2 text-xs">
-                <strong className="block text-emerald-900 font-bold">Complimentary Guest Privileges:</strong>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-emerald-800">
+              {/* Room Policies & Dynamic Privileges */}
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2.5 text-xs">
+                <strong className="block text-slate-900 font-bold">Reservation Terms &amp; Privileges:</strong>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-700">
                   <div className="flex items-center gap-2">
-                    <i className="fa-solid fa-check text-emerald-600" />
-                    <span>Free high-speed WiFi throughout stay</span>
+                    <i className={`fa-solid ${roomPolicy?.refundable !== false ? 'fa-check text-emerald-600' : 'fa-ban text-amber-600'}`} />
+                    <span>{roomPolicy?.badgeText || (roomPolicy?.refundable !== false ? 'Refundable terms apply' : 'Non-refundable reservation')}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <i className="fa-solid fa-check text-emerald-600" />
-                    <span>2 complimentary bottles of water daily</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <i className="fa-solid fa-check text-emerald-600" />
-                    <span>Digital keyless check-in pass</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <i className={`fa-solid ${hotel?.cancellationPolicy?.refundable ? 'fa-check text-emerald-600' : 'fa-circle-info text-amber-600'}`} />
-                    <span>{hotel?.cancellationPolicy?.badgeText || (hotel?.cancellationPolicy?.refundable ? 'Refundable terms apply' : 'Non-refundable reservation')}</span>
-                  </div>
+                  {hotel?.allowPayAtHotel !== false && (
+                    <div className="flex items-center gap-2">
+                      <i className="fa-solid fa-building-columns text-slate-600" />
+                      <span>Pay at Hotel option available</span>
+                    </div>
+                  )}
+                  {roomPolicy?.summary && (
+                    <div className="flex items-start gap-2 col-span-full text-slate-600 bg-white p-2.5 rounded-lg border border-slate-200/70">
+                      <i className="fa-solid fa-shield-halved text-sky-600 mt-0.5 shrink-0" />
+                      <span>{roomPolicy.summary}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

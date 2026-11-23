@@ -10,6 +10,10 @@ const ROLES = require('../constants/roles');
 const logger = require('../utils/logger');
 const { assertConfirmable, assertCanCheckIn, assertCanCheckOut, assertCanMarkNoShow } = require('./bookingLifecycle');
 
+// Compact tokens stay well under this; legacy tokens carrying the full guest
+// profile were ~250 chars and produced QR codes too dense for camera scanners.
+const VAULT_TOKEN_MAX_LENGTH = 140;
+
 class BookingService {
   constructor() {
     this.getVaultSecretKey = this.getVaultSecretKey.bind(this);
@@ -42,6 +46,21 @@ class BookingService {
     const hotel = db.findById('hotels', room.hotelId);
     if (!hotel) throw new Error('Hotel not found.');
 
+    // Normalize guest breakdown (splitting adults into male and female for clear stay records)
+    const normalizedGuests = typeof guestCount === 'object' && guestCount !== null
+      ? {
+          adults: Number(guestCount.adults) || ((Number(guestCount.adultsMale) || 0) + (Number(guestCount.adultsFemale) || 0)) || 2,
+          adultsMale: guestCount.adultsMale !== undefined ? Number(guestCount.adultsMale) : Math.ceil((Number(guestCount.adults) || 2) / 2),
+          adultsFemale: guestCount.adultsFemale !== undefined ? Number(guestCount.adultsFemale) : Math.floor((Number(guestCount.adults) || 2) / 2),
+          children: Number(guestCount.children) || 0
+        }
+      : {
+          adults: Number(guestCount) || 2,
+          adultsMale: Math.ceil((Number(guestCount) || 2) / 2),
+          adultsFemale: Math.floor((Number(guestCount) || 2) / 2),
+          children: 0
+        };
+
     // 1. Lock room inventory (prevents double-booking)
     const lock = inventoryService.lockRoomInventory({
       roomId,
@@ -59,7 +78,7 @@ class BookingService {
       checkOutDate,
       roomsCount,
       couponCode,
-      guestCount
+      guestCount: normalizedGuests
     });
 
     const bookingId = `BK-${uuidv4()}`;
@@ -78,11 +97,14 @@ class BookingService {
       roomId: room.id,
       roomName: room.name,
       roomType: room.type,
+      cancellationPolicy: room.cancellationPolicy || hotel.cancellationPolicy || null,
+      amenities: room.amenities || hotel.amenities || [],
+      allowPayAtHotel: hotel.allowPayAtHotel ?? true,
       userId: userId || 'guest',
       guestName,
       guestEmail,
       guestPhone,
-      guestCount,
+      guestCount: normalizedGuests,
       specialRequests,
       checkInDate,
       checkOutDate,
@@ -274,18 +296,33 @@ class BookingService {
       inventoryService.releaseLock(booking.lockId);
     }
 
-    // Refund policy calculation
+    // Dynamic Refund & Cancellation Policy calculation based on actual hotel/room policy
     let refundAmount = booking.totalAmount;
     let cancellationFee = 0;
 
-    const checkInDate = new Date(booking.checkInDate);
-    const now = new Date();
-    const hoursUntilCheckIn = (checkInDate - now) / (1000 * 60 * 60);
+    const policy = booking.cancellationPolicy || hotel?.cancellationPolicy || {};
+    const isRefundable = policy.refundable !== false && String(policy.type || '').toUpperCase() !== 'NON_REFUNDABLE';
 
-    if (hoursUntilCheckIn < 24) {
-      // 50% refund if within 24 hours
-      cancellationFee = booking.totalAmount * 0.5;
-      refundAmount = booking.totalAmount * 0.5;
+    if (!isRefundable) {
+      // Non-refundable reservation
+      cancellationFee = booking.totalAmount;
+      refundAmount = 0;
+    } else {
+      const windowHours = Number(policy.windowHours) || 24;
+      const lateFeeRate = (Number(policy.lateFeePercentage) || 50) / 100;
+      const checkInDate = new Date(booking.checkInDate);
+      const now = new Date();
+      const hoursUntilCheckIn = (checkInDate - now) / (1000 * 60 * 60);
+
+      if (hoursUntilCheckIn < windowHours) {
+        // Cancelled within non-free window
+        cancellationFee = Math.round(booking.totalAmount * lateFeeRate * 100) / 100;
+        refundAmount = Math.max(0, Math.round((booking.totalAmount - cancellationFee) * 100) / 100);
+      } else {
+        // Cancelled before window: 100% full refund
+        cancellationFee = 0;
+        refundAmount = booking.totalAmount;
+      }
     }
 
     const wasPaid = booking.paymentStatus === PAYMENT_STATUS.PAID;
@@ -305,32 +342,47 @@ class BookingService {
   getUserBookings(userId) {
     const list = db.find('bookings', (b) => b.userId === userId);
     return list.map((b) => {
-      if (!b.vaultToken) {
-        b.vaultToken = this.encryptBookingVaultToken(b);
-      }
+      this.ensureVaultToken(b);
       return b;
     });
   }
 
   getBookingById(id) {
     const b = db.findById('bookings', id);
-    if (b && !b.vaultToken) {
-      b.vaultToken = this.encryptBookingVaultToken(b);
-    }
+    if (b) this.ensureVaultToken(b);
     return b;
   }
 
   getBookingByCode(bookingCode) {
     const b = db.findOne('bookings', (x) => x.bookingCode === bookingCode.trim().toUpperCase());
-    if (b && !b.vaultToken) {
-      b.vaultToken = this.encryptBookingVaultToken(b);
-    }
+    if (b) this.ensureVaultToken(b);
     return b;
   }
 
   getVaultSecretKey() {
     const secret = config.QR_VAULT_SECRET || config.JWT_SECRET || 'hotel_factories_qr_vault_master_key_2026';
     return crypto.createHash('sha256').update(secret).digest();
+  }
+
+  /**
+   * Returns a compact, scannable vault token. Legacy tokens embedded the full
+   * guest profile (~250 chars) which made the QR too dense for phone cameras.
+   * They are transparently re-issued as short tokens when read.
+   */
+  ensureVaultToken(booking) {
+    if (!booking) return '';
+    const current = typeof booking.vaultToken === 'string' ? booking.vaultToken : '';
+    const isCompactToken = current.startsWith('HF1.')
+      && current.split('.').length === 4
+      && current.length <= VAULT_TOKEN_MAX_LENGTH;
+    if (isCompactToken) return current;
+
+    const token = this.encryptBookingVaultToken(booking);
+    if (token) {
+      booking.vaultToken = token;
+      return token;
+    }
+    return current;
   }
 
   encryptBookingVaultToken(booking) {
@@ -340,13 +392,10 @@ class BookingService {
       const iv = crypto.randomBytes(12);
       const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
 
-      const payload = JSON.stringify({
-        code: booking.bookingCode,
-        id: booking.id,
-        hotelId: booking.hotelId,
-        guestName: booking.guestName,
-        iat: Date.now()
-      });
+      // Only the booking reference and issue time are needed. The backend
+      // looks up the authoritative booking record after decryption.
+      const bookingRef = booking.bookingCode || booking.id || '';
+      const payload = `${bookingRef}|${Date.now()}`;
 
       const encrypted = Buffer.concat([cipher.update(payload, 'utf8'), cipher.final()]);
       const authTag = cipher.getAuthTag();
@@ -375,7 +424,17 @@ class BookingService {
       decipher.setAuthTag(authTag);
 
       const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
-      return JSON.parse(decrypted.toString('utf8'));
+      const text = decrypted.toString('utf8');
+
+      // New compact format: "HF-2026-ABC123|<timestamp>"
+      // Legacy format: JSON with code/id/hotelId/guestName/iat.
+      try {
+        return JSON.parse(text);
+      } catch {
+        const [code, issuedAt] = text.split('|');
+        if (!code) return null;
+        return { code, iat: Number(issuedAt) || null };
+      }
     } catch (err) {
       logger.warn(`Vault decryption failed: ${err.message}`);
       return null;
@@ -403,7 +462,7 @@ class BookingService {
     let decryptedPayload = null;
     let cleanCode = '';
 
-    if (input.startsWith('HF1.') || (input.includes('.') && input.split('.').length === 4)) {
+    if (/^HF1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(input)) {
       isVaultEncrypted = true;
       decryptedPayload = this.decryptBookingVaultToken(input);
       if (!decryptedPayload) {
@@ -416,10 +475,12 @@ class BookingService {
           error: 'Decryption failed: Token is counterfeit or tampered. Only Hotel Factories Backend can unlock valid QR passes.'
         };
       }
-      cleanCode = (decryptedPayload.code || decryptedPayload.id || '').toUpperCase();
+      cleanCode = (decryptedPayload.code || decryptedPayload.c || decryptedPayload.id || '').toUpperCase();
     } else {
       cleanCode = input.toUpperCase();
     }
+
+    if (!cleanCode) return null;
 
     const booking = db.findOne('bookings', (b) => 
       (b.bookingCode && b.bookingCode.toUpperCase() === cleanCode) || 
@@ -428,23 +489,61 @@ class BookingService {
     if (!booking) return null;
 
     const expectedSig = this.generatePassSignature(booking);
-    const hasSignature = Boolean(signature && signature.trim());
-    const isAuthentic = isVaultEncrypted
-      ? true
-      : (hasSignature && (signature.trim().toLowerCase() === expectedSig.toLowerCase()));
+    const hasSignature = Boolean(signature && String(signature).trim());
+    const signatureMatches = hasSignature
+      && String(signature).trim().toLowerCase() === expectedSig.toLowerCase();
 
-    const vaultToken = booking.vaultToken || this.encryptBookingVaultToken(booking);
+    // AES-256-GCM authenticates the ciphertext through its auth tag, so a
+    // successfully decrypted vault token is cryptographically authentic.
+    const isAuthentic = isVaultEncrypted || signatureMatches;
+
+    // A supplied signature that does not match is a forgery attempt. Never
+    // expose the expected signature or a usable vault token in this response.
+    if (!isVaultEncrypted && hasSignature && !signatureMatches) {
+      return {
+        isValid: false,
+        isCryptographicallySigned: false,
+        isSecretDecrypted: false,
+        signatureStatus: 'TAMPERED_OR_INVALID',
+        securityStamp: 'HMAC-SHA256 SIGNATURE MISMATCH: Forged or altered pass rejected.',
+        error: 'Signature verification failed: This QR pass was not issued by Hotel Factories.',
+        bookingCode: booking.bookingCode,
+        bookingId: booking.id,
+        hotelId: booking.hotelId,
+        hotelName: booking.hotelName,
+        hotelAddress: booking.hotelAddress,
+        hotelCity: booking.hotelCity,
+        roomName: booking.roomName,
+        guestName: booking.guestName,
+        checkInDate: booking.checkInDate,
+        checkOutDate: booking.checkOutDate,
+        status: booking.status,
+        paymentStatus: booking.paymentStatus,
+        totalAmount: booking.totalAmount,
+        verifiedAt: new Date().toISOString()
+      };
+    }
+
+    // Only authentic passes receive credentials. An unsigned code lookup is
+    // allowed for front-desk manual entry but is explicitly flagged as such.
+    const vaultToken = isAuthentic ? this.ensureVaultToken(booking) : null;
 
     return {
       isValid: true,
-      isCryptographicallySigned: true,
+      isCryptographicallySigned: isAuthentic,
       isSecretDecrypted: isVaultEncrypted,
-      encryptionMethod: isVaultEncrypted ? 'AES-256-GCM Military-Grade Cryptographic Vault' : 'HMAC-SHA256 Digital Signature',
-      signatureStatus: 'AUTHENTIC_SIGNED',
+      encryptionMethod: isVaultEncrypted
+        ? 'AES-256-GCM Military-Grade Cryptographic Vault'
+        : isAuthentic
+          ? 'HMAC-SHA256 Digital Signature'
+          : 'Manual Reference Lookup',
+      signatureStatus: isAuthentic ? 'AUTHENTIC_SIGNED' : 'UNSIGNED_LOOKUP',
       securityStamp: isVaultEncrypted 
         ? `AES-256-GCM Certified & Unlocked via Hotel Factories Backend Secret Key (IV: ${input.split('.')[1]?.slice(0, 8)}...)`
-        : `HMAC-SHA256 Certified by Hotel Factories Security Engine (${expectedSig})`,
-      passSignature: expectedSig,
+        : isAuthentic
+          ? `HMAC-SHA256 Certified by Hotel Factories Security Engine (${expectedSig})`
+          : 'MANUAL LOOKUP (No Signature) - Verify Govt Photo ID before check-in',
+      passSignature: isAuthentic ? expectedSig : null,
       vaultToken,
       bookingCode: booking.bookingCode,
       bookingId: booking.id,
@@ -477,11 +576,17 @@ class BookingService {
       throw new Error('Unauthorized to view this hotel bookings.');
     }
 
-    return db.find('bookings', (b) => b.hotelId === hotelId);
+    return db.find('bookings', (b) => b.hotelId === hotelId).map((b) => {
+      this.ensureVaultToken(b);
+      return b;
+    });
   }
 
   getAdminAllBookings() {
-    return db.find('bookings');
+    return db.find('bookings').map((b) => {
+      this.ensureVaultToken(b);
+      return b;
+    });
   }
 }
 

@@ -4,18 +4,34 @@ import React from 'react';
 import { useApp } from '../context/AppContext';
 
 export default function BottomNav() {
-  const { currentScreen, switchNav, bookings } = useApp();
+  const {
+    currentScreen,
+    switchNav,
+    bookings,
+    user,
+    setIsAuthSheetOpen,
+    isBookingSheetOpen,
+    isVoucherSheetOpen,
+    isFilterSheetOpen,
+    isAuthSheetOpen
+  } = useApp();
 
-  // Hide floating mobile navigation bar on checkout to keep complete payment unobstructed
-  if (currentScreen === 'checkout') return null;
+  const isAnySheetOpen = isBookingSheetOpen || isVoucherSheetOpen || isFilterSheetOpen || isAuthSheetOpen;
+
+  // Hide floating mobile navigation bar on checkout or when a sheet/modal is open
+  if (currentScreen === 'checkout' || isAnySheetOpen) return null;
 
   const navItems = [
-    { id: 'home', label: 'Explore', icon: 'fa-solid fa-compass' },
+    { id: 'home', label: 'Stays', icon: 'fa-solid fa-hotel' },
     { id: 'search', label: 'Search', icon: 'fa-solid fa-magnifying-glass' },
-    { id: 'bookings', label: 'Bookings', icon: 'fa-solid fa-ticket', badge: bookings?.length || 0 },
+    { id: 'bookings', label: 'Trips', icon: 'fa-solid fa-calendar-check', badge: bookings?.length || 0 },
     { id: 'saved', label: 'Wishlist', icon: 'fa-solid fa-heart' },
-    { id: 'admin', label: 'Partner', icon: 'fa-solid fa-crown' },
+    { id: 'profile', label: 'Account', icon: 'fa-solid fa-circle-user' },
   ];
+
+  const handleNavClick = (itemId) => {
+    switchNav(itemId);
+  };
 
   return (
     <nav 
@@ -33,7 +49,7 @@ export default function BottomNav() {
                 ? 'text-white bg-black font-semibold shadow-xs'
                 : 'text-zinc-500 hover:text-black hover:bg-zinc-100/70 transition-colors'
             }`}
-            onClick={() => switchNav(item.id)}
+            onClick={() => handleNavClick(item.id)}
             aria-label={item.badge > 0 ? `${item.label} (${item.badge})` : item.label}
             aria-current={isActive ? 'page' : undefined}
           >
@@ -45,6 +61,9 @@ export default function BottomNav() {
                 }`} aria-hidden="true">
                   {item.badge}
                 </span>
+              )}
+              {item.id === 'profile' && user && (
+                <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
               )}
             </div>
             <span className="text-[10px] tracking-tight mt-0.5 leading-none">

@@ -2,45 +2,50 @@ const fs = require('fs');
 const path = require('path');
 const { PNG } = require('pngjs');
 
-// 1. SVG Favicon Content
+// 1. High-Resolution SVG Favicon Content
 const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
   <defs>
     <linearGradient id="hf-bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#0284c7" />
-      <stop offset="100%" stop-color="#001f4d" />
+      <stop offset="60%" stop-color="#0369a1" />
+      <stop offset="100%" stop-color="#090d16" />
     </linearGradient>
-    <linearGradient id="gold-crown" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fde047" />
-      <stop offset="100%" stop-color="#f59e0b" />
+    <linearGradient id="gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <linearGradient id="white-sheen" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.05" />
     </linearGradient>
   </defs>
 
   <!-- Squircle Base with smooth rounded corners -->
   <rect width="64" height="64" rx="16" fill="url(#hf-bg)" />
-  <rect x="1" y="1" width="62" height="62" rx="15" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1.5" />
+  <rect x="1" y="1" width="62" height="62" rx="15" fill="none" stroke="url(#white-sheen)" stroke-width="1.5" />
 
-  <!-- 5-Star Luxury Crown on Top -->
-  <path d="M22 19 L27 14 L32 17 L37 14 L42 19 Z" fill="url(#gold-crown)" />
-  <circle cx="32" cy="11" r="2.2" fill="#fbbf24" />
+  <!-- 5-Star Luxury Star on Top -->
+  <path d="M32 9 L34.2 13.6 L39.2 14.3 L35.6 17.8 L36.5 22.8 L32 20.4 L27.5 22.8 L28.4 17.8 L24.8 14.3 L29.8 13.6 Z" fill="url(#gold-grad)" />
 
-  <!-- Grand Hotel Architecture Body (Pure White) -->
-  <path d="M16 22 H48 A2 2 0 0 1 50 24 V49 H14 V24 A2 2 0 0 1 16 22 Z" fill="#ffffff" />
+  <!-- Grand Hotel Architecture Body (Pure Crisp White) -->
+  <path d="M16 26 H48 A2 2 0 0 1 50 28 V51 H14 V28 A2 2 0 0 1 16 26 Z" fill="#ffffff" />
 
   <!-- Hotel Upper Floor Windows (Sky Blue) -->
-  <rect x="19" y="26" width="5.5" height="5.5" rx="1.2" fill="#0284c7" />
-  <rect x="29.2" y="26" width="5.5" height="5.5" rx="1.2" fill="#0284c7" />
-  <rect x="39.5" y="26" width="5.5" height="5.5" rx="1.2" fill="#0284c7" />
+  <rect x="19" y="30" width="6" height="5" rx="1.2" fill="#0284c7" />
+  <rect x="29" y="30" width="6" height="5" rx="1.2" fill="#0284c7" />
+  <rect x="39" y="30" width="6" height="5" rx="1.2" fill="#0284c7" />
 
-  <rect x="19" y="34.5" width="5.5" height="5.5" rx="1.2" fill="#0284c7" />
-  <rect x="29.2" y="34.5" width="5.5" height="5.5" rx="1.2" fill="#0284c7" />
-  <rect x="39.5" y="34.5" width="5.5" height="5.5" rx="1.2" fill="#0284c7" />
+  <rect x="19" y="37" width="6" height="5" rx="1.2" fill="#0284c7" />
+  <rect x="29" y="37" width="6" height="5" rx="1.2" fill="#0284c7" />
+  <rect x="39" y="37" width="6" height="5" rx="1.2" fill="#0284c7" />
 
-  <!-- Ground Floor Grand Arch Portal -->
-  <path d="M25 49 V41 A7 7 0 0 1 39 41 V49 Z" fill="#001f4d" />
-  <path d="M27.5 49 V42 A4.5 4.5 0 0 1 36.5 42 V49 Z" fill="#f59e0b" opacity="0.95" />
+  <!-- Ground Floor Grand Arch Portal (Warm Golden Archway) -->
+  <path d="M26 51 V45 A6 6 0 0 1 38 45 V51 Z" fill="#090d16" />
+  <path d="M28 51 V45.5 A4 4 0 0 1 36 45.5 V51 Z" fill="url(#gold-grad)" />
 
   <!-- Base plinth -->
-  <rect x="12" y="49" width="40" height="3" rx="1.5" fill="#f59e0b" />
+  <rect x="12" y="51" width="40" height="3" rx="1.5" fill="url(#gold-grad)" />
 </svg>`;
 
 const appDir = path.resolve(__dirname, '../src/app');
@@ -56,7 +61,7 @@ function renderIconPNG(size) {
   const scale = size / 64;
 
   const bgR1 = 2, bgG1 = 132, bgB1 = 199; // #0284c7
-  const bgR2 = 0, bgG2 = 31, bgB2 = 77;   // #001f4d
+  const bgR2 = 9, bgG2 = 13, bgB2 = 22;   // #090d16
 
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
@@ -89,40 +94,35 @@ function renderIconPNG(size) {
       let b = Math.round(bgB1 + (bgB2 - bgB1) * t);
       let a = 255;
 
-      // Crown / Star at top (y: 10 to 19, x: 22 to 42)
-      if (ny >= 10 && ny <= 19 && nx >= 20 && nx <= 44) {
-        const starDist = Math.hypot(nx - 32, ny - 11.5);
-        if (starDist <= 2.5) {
-          r = 251; g = 191; b = 36; // Amber gold
-        } else if (ny >= 14 && ny <= 19) {
-          const dy = ny - 14;
-          if (nx >= 22 + dy * 0.5 && nx <= 42 - dy * 0.5) {
-            r = 245; g = 158; b = 11;
-          }
+      // Golden Star at top (y: 9 to 23, x: 24 to 40)
+      if (ny >= 9 && ny <= 23 && nx >= 24 && nx <= 40) {
+        const starDist = Math.hypot(nx - 32, ny - 16);
+        if (starDist <= 5.5) {
+          r = 245; g = 158; b = 11; // Amber gold
         }
       }
 
       // Hotel Main Body (White)
-      if (nx >= 15 && nx <= 49 && ny >= 22 && ny <= 49) {
+      if (nx >= 15 && nx <= 49 && ny >= 26 && ny <= 51) {
         r = 255; g = 255; b = 255;
 
-        // Windows row 1 (y: 26 to 31.5)
-        const inRow1 = ny >= 26 && ny <= 31.5;
-        const inRow2 = ny >= 34.5 && ny <= 40;
-        const inCol1 = nx >= 19 && nx <= 24.5;
-        const inCol2 = nx >= 29.2 && nx <= 34.8;
-        const inCol3 = nx >= 39.5 && nx <= 45;
+        // Windows row 1 (y: 30 to 35)
+        const inRow1 = ny >= 30 && ny <= 35;
+        const inRow2 = ny >= 37 && ny <= 42;
+        const inCol1 = nx >= 19 && nx <= 25;
+        const inCol2 = nx >= 29 && nx <= 35;
+        const inCol3 = nx >= 39 && nx <= 45;
 
         if ((inRow1 || inRow2) && (inCol1 || inCol2 || inCol3)) {
           r = 2; g = 132; b = 199; // Sky blue windows
         }
 
-        // Grand Arch Portal (y: 41 to 49, x: 25 to 39)
-        if (ny >= 41 && nx >= 25 && nx <= 39) {
-          const archCenterDist = Math.hypot(nx - 32, ny - 41);
-          if (ny >= 41 && archCenterDist <= 7) {
-            r = 0; g = 31; b = 77; // Dark navy portal
-            if (archCenterDist <= 4.5) {
+        // Grand Arch Portal (y: 45 to 51, x: 26 to 38)
+        if (ny >= 45 && nx >= 26 && nx <= 38) {
+          const archCenterDist = Math.hypot(nx - 32, ny - 45);
+          if (ny >= 45 && archCenterDist <= 6) {
+            r = 9; g = 13; b = 22; // Dark portal
+            if (archCenterDist <= 4) {
               r = 245; g = 158; b = 11; // Gold inner glow
             }
           }
@@ -130,7 +130,7 @@ function renderIconPNG(size) {
       }
 
       // Base plinth
-      if (ny >= 49 && ny <= 52 && nx >= 12 && nx <= 52) {
+      if (ny >= 51 && ny <= 54 && nx >= 12 && nx <= 52) {
         r = 245; g = 158; b = 11;
       }
 
@@ -191,4 +191,3 @@ fs.writeFileSync(path.join(publicDir, 'favicon.ico'), icoBuffer);
 fs.writeFileSync(path.join(appDir, 'apple-icon.png'), png180);
 fs.writeFileSync(path.join(publicDir, 'apple-icon.png'), png180);
 console.log('✓ favicon.ico (16/32/48) & apple-icon.png (180x180) created successfully!');
-

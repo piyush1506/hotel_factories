@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import CustomDatePicker from '../components/CustomDatePicker';
 import CustomGuestPicker from '../components/CustomGuestPicker';
+import HotelCardImageCarousel from '../components/common/HotelCardImageCarousel';
 import { hotelAPI } from '../services/api';
 import { getDefaultDates } from '../utils/helpers';
 
@@ -34,6 +35,8 @@ export default function HomeScreen() {
   const [checkOutDate, setCheckOutDate] = useState(() => searchParams?.checkOutDate || '2026-11-09');
   const [rooms, setRooms] = useState(() => searchParams?.rooms || 1);
   const [adults, setAdults] = useState(() => searchParams?.adults || 2);
+  const [adultsMale, setAdultsMale] = useState(() => searchParams?.adultsMale !== undefined ? Number(searchParams.adultsMale) : 1);
+  const [adultsFemale, setAdultsFemale] = useState(() => searchParams?.adultsFemale !== undefined ? Number(searchParams.adultsFemale) : 1);
   const [childrenCount, setChildrenCount] = useState(() => searchParams?.childrenCount || 0);
   const [priceRange, setPriceRange] = useState('₹0-₹1500, ₹1500-₹2500,...');
   const [activePopover, setActivePopover] = useState(null); // 'dest' | 'checkin' | 'checkout' | 'guests' | 'price'
@@ -54,6 +57,8 @@ export default function HomeScreen() {
 
   // Sync internal state when searchParams changes
   useEffect(() => {
+    if (searchParams?.adultsMale !== undefined) setAdultsMale(Number(searchParams.adultsMale));
+    if (searchParams?.adultsFemale !== undefined) setAdultsFemale(Number(searchParams.adultsFemale));
     if (searchParams?.adults) setAdults(Number(searchParams.adults));
     if (searchParams?.childrenCount !== undefined) setChildrenCount(Number(searchParams.childrenCount));
     if (searchParams?.rooms) setRooms(Number(searchParams.rooms));
@@ -185,9 +190,11 @@ export default function HomeScreen() {
       if (e.key === 'Escape') setActivePopover(null);
     }
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
     document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
@@ -309,7 +316,9 @@ export default function HomeScreen() {
     setSearchParams({
       checkInDate,
       checkOutDate,
-      adults,
+      adults: adultsMale + adultsFemale,
+      adultsMale,
+      adultsFemale,
       rooms,
       childrenCount
     });
@@ -369,12 +378,13 @@ export default function HomeScreen() {
         return 'fa-solid fa-circle-check text-emerald-600';
       };
 
-      const amenitiesList = Array.isArray(h.amenities) && h.amenities.length > 0 
-        ? h.amenities 
-        : ['Air Conditioning', 'Free High-Speed WiFi'];
+      const rawAmenities = [];
+      if (Array.isArray(h.amenities)) rawAmenities.push(...h.amenities);
+      if (Array.isArray(h.facilities)) rawAmenities.push(...h.facilities);
+      const amenitiesList = Array.from(new Set(rawAmenities.filter(Boolean)));
 
-      const perk1 = amenitiesList[0] || 'Air Conditioning';
-      const perk2 = amenitiesList[1] || (amenitiesList.length > 2 ? amenitiesList[2] : 'Free High-Speed WiFi');
+      const perk1 = amenitiesList[0] || (h.cancellationPolicy?.badgeText ? h.cancellationPolicy.badgeText : (h.allowPayAtHotel !== false ? 'Pay at Hotel' : ''));
+      const perk2 = amenitiesList[1] || (amenitiesList.length > 2 ? amenitiesList[2] : (perk1 !== 'Pay at Hotel' && h.allowPayAtHotel !== false ? 'Pay at Hotel' : ''));
       const perk1Icon = getPerkIcon(perk1);
       const perk2Icon = getPerkIcon(perk2);
 
@@ -602,7 +612,9 @@ export default function HomeScreen() {
       ...prev,
       checkInDate,
       checkOutDate,
-      adults,
+      adults: adultsMale + adultsFemale,
+      adultsMale,
+      adultsFemale,
       rooms,
       childrenCount
     }));
@@ -641,20 +653,20 @@ export default function HomeScreen() {
           {/* Segmented MakeMyTrip Style Card */}
           <div ref={searchConsoleRef} className="relative w-full max-w-[1240px] mx-auto select-none">
             <div className="bg-white rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.16)] border border-slate-200/90 overflow-visible relative">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 divide-y md:divide-y-0 lg:divide-x divide-slate-200">
+              <div className="grid grid-cols-2 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-slate-200">
                 
                 {/* 1. City, Property Name Or Location */}
                 <div 
-                  className="lg:col-span-3 p-3.5 sm:px-5 sm:pt-4 sm:pb-8 hover:bg-blue-50/40 transition-colors cursor-pointer relative"
+                  className="col-span-2 lg:col-span-3 p-3 sm:px-5 sm:pt-4 sm:pb-8 hover:bg-blue-50/40 transition-colors cursor-pointer relative"
                   onClick={() => setActivePopover(activePopover === 'dest' ? null : 'dest')}
                 >
-                  <span className="block text-xs text-slate-500 font-normal leading-tight">
+                  <span className="block text-[11px] sm:text-xs text-slate-500 font-normal leading-tight">
                     City, Property Name Or Location
                   </span>
-                  <span className="block text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight leading-none mt-1.5 truncate">
+                  <span className="block text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight leading-none mt-1 sm:mt-1.5 truncate">
                     {destinationCity}
                   </span>
-                  <span className="block text-xs text-slate-500 font-normal mt-1 truncate">
+                  <span className="block text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 sm:mt-1 truncate">
                     {destinationCountry}
                   </span>
 
@@ -663,16 +675,29 @@ export default function HomeScreen() {
                     <div 
                       className="absolute left-0 top-[calc(100%+8px)] w-full sm:min-w-[360px] md:min-w-[400px] max-h-[360px] overflow-y-auto bg-white rounded-xl shadow-2xl border border-slate-200/90 p-2.5 z-[100] animate-in fade-in slide-in-from-top-1 duration-150"
                       onClick={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
                     >
                       <div className="p-1 mb-2">
-                        <input
-                          type="text"
-                          value={destinationSearchInput}
-                          onChange={(e) => setDestinationSearchInput(e.target.value)}
-                          placeholder="Search city, area or hotel..."
-                          className="w-full text-xs sm:text-sm font-semibold text-slate-900 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-[#003b95] focus:bg-white"
-                          autoFocus
-                        />
+                        <div className="relative flex items-center">
+                          <i className="fa-solid fa-magnifying-glass absolute left-3 text-slate-400 text-xs pointer-events-none" />
+                          <input
+                            type="text"
+                            value={destinationSearchInput}
+                            onChange={(e) => setDestinationSearchInput(e.target.value)}
+                            placeholder="Search city, area or hotel..."
+                            className="w-full text-xs sm:text-sm font-semibold text-slate-900 bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-8 py-2.5 outline-none focus:border-black focus:bg-white transition-all shadow-2xs"
+                            autoFocus
+                          />
+                          {destinationSearchInput && (
+                            <button
+                              type="button"
+                              onClick={() => setDestinationSearchInput('')}
+                              className="absolute right-2.5 text-slate-400 hover:text-slate-700 p-1 cursor-pointer text-xs"
+                            >
+                              <i className="fa-solid fa-xmark" />
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between px-2.5 py-1 border-b border-slate-100 mb-1">
@@ -750,30 +775,31 @@ export default function HomeScreen() {
 
                 {/* 2. Check-In */}
                 <div 
-                  className="lg:col-span-2 p-3.5 sm:px-4 sm:pt-4 sm:pb-8 hover:bg-blue-50/40 transition-colors cursor-pointer relative"
+                  className="col-span-1 lg:col-span-2 p-2.5 sm:px-4 sm:pt-4 sm:pb-8 border-r border-slate-200 lg:border-r-0 hover:bg-blue-50/40 transition-colors cursor-pointer relative"
                   onClick={() => setActivePopover(activePopover === 'checkin' ? null : 'checkin')}
                 >
-                  <div className="flex items-center gap-1 text-xs text-slate-500 font-normal leading-tight">
+                  <div className="flex items-center gap-1 text-[11px] sm:text-xs text-slate-500 font-normal leading-tight">
                     <span>Check-In</span>
-                    <i className="fa-solid fa-chevron-down text-sky-500 text-[10px]" />
+                    <i className="fa-solid fa-chevron-down text-sky-500 text-[9px] sm:text-[10px]" />
                   </div>
-                  <div className="flex items-baseline mt-1.5 leading-none" suppressHydrationWarning>
-                    <span className="text-2xl lg:text-3xl font-extrabold text-slate-900 mr-1.5" suppressHydrationWarning>
+                  <div className="flex items-baseline mt-1 sm:mt-1.5 leading-none" suppressHydrationWarning>
+                    <span className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 mr-1 sm:mr-1.5" suppressHydrationWarning>
                       {inDateInfo.day}
                     </span>
-                    <span className="text-base sm:text-lg font-bold text-slate-900" suppressHydrationWarning>
+                    <span className="text-sm sm:text-lg font-bold text-slate-900" suppressHydrationWarning>
                       {inDateInfo.monthYear}
                     </span>
                   </div>
-                  <span className="block text-xs text-slate-500 font-normal mt-1 truncate" suppressHydrationWarning>
+                  <span className="block text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 sm:mt-1 truncate" suppressHydrationWarning>
                     {inDateInfo.weekday}
                   </span>
 
                   {/* Date Picker Popover */}
                   {activePopover === 'checkin' && (
                     <div 
-                      className="absolute left-0 top-[calc(100%+8px)] z-50 shadow-2xl rounded-2xl max-w-[calc(100vw-32px)] overflow-hidden"
+                      className="absolute left-0 top-[calc(100%+8px)] z-50 shadow-2xl rounded-2xl max-w-[calc(100vw-24px)] overflow-hidden"
                       onClick={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
                     >
                       <CustomDatePicker
                         checkInDate={checkInDate}
@@ -782,7 +808,7 @@ export default function HomeScreen() {
                         onChange={({ checkInDate: newIn, checkOutDate: newOut }) => {
                           setCheckInDate(newIn);
                           setCheckOutDate(newOut);
-                          setActivePopover('checkout');
+                          setActivePopover(null);
                         }}
                         onClose={() => setActivePopover(null)}
                       />
@@ -792,30 +818,31 @@ export default function HomeScreen() {
 
                 {/* 3. Check-Out */}
                 <div 
-                  className="lg:col-span-2 p-3.5 sm:px-4 sm:pt-4 sm:pb-8 hover:bg-blue-50/40 transition-colors cursor-pointer relative"
+                  className="col-span-1 lg:col-span-2 p-2.5 sm:px-4 sm:pt-4 sm:pb-8 hover:bg-blue-50/40 transition-colors cursor-pointer relative"
                   onClick={() => setActivePopover(activePopover === 'checkout' ? null : 'checkout')}
                 >
-                  <div className="flex items-center gap-1 text-xs text-slate-500 font-normal leading-tight">
+                  <div className="flex items-center gap-1 text-[11px] sm:text-xs text-slate-500 font-normal leading-tight">
                     <span>Check-Out</span>
-                    <i className="fa-solid fa-chevron-down text-sky-500 text-[10px]" />
+                    <i className="fa-solid fa-chevron-down text-sky-500 text-[9px] sm:text-[10px]" />
                   </div>
-                  <div className="flex items-baseline mt-1.5 leading-none" suppressHydrationWarning>
-                    <span className="text-2xl lg:text-3xl font-extrabold text-slate-900 mr-1.5" suppressHydrationWarning>
+                  <div className="flex items-baseline mt-1 sm:mt-1.5 leading-none" suppressHydrationWarning>
+                    <span className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 mr-1 sm:mr-1.5" suppressHydrationWarning>
                       {outDateInfo.day}
                     </span>
-                    <span className="text-base sm:text-lg font-bold text-slate-900" suppressHydrationWarning>
+                    <span className="text-sm sm:text-lg font-bold text-slate-900" suppressHydrationWarning>
                       {outDateInfo.monthYear}
                     </span>
                   </div>
-                  <span className="block text-xs text-slate-500 font-normal mt-1 truncate" suppressHydrationWarning>
+                  <span className="block text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 sm:mt-1 truncate" suppressHydrationWarning>
                     {outDateInfo.weekday}
                   </span>
 
                   {/* Date Picker Popover */}
                   {activePopover === 'checkout' && (
                     <div 
-                      className="absolute left-0 lg:-left-20 top-[calc(100%+8px)] z-50 shadow-2xl rounded-2xl max-w-[calc(100vw-32px)] overflow-hidden"
+                      className="absolute right-0 sm:right-auto lg:-left-20 top-[calc(100%+8px)] z-50 shadow-2xl rounded-2xl max-w-[calc(100vw-24px)] overflow-hidden"
                       onClick={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
                     >
                       <CustomDatePicker
                         checkInDate={checkInDate}
@@ -834,36 +861,37 @@ export default function HomeScreen() {
 
                 {/* 4. Rooms & Guests */}
                 <div 
-                  className="lg:col-span-3 p-3.5 sm:px-4 sm:pt-4 sm:pb-8 hover:bg-blue-50/40 transition-colors cursor-pointer relative"
+                  className="col-span-1 lg:col-span-3 p-2.5 sm:px-4 sm:pt-4 sm:pb-8 border-r border-slate-200 lg:border-r-0 hover:bg-blue-50/40 transition-colors cursor-pointer relative"
                   onClick={() => setActivePopover(activePopover === 'guests' ? null : 'guests')}
                 >
-                  <div className="flex items-center gap-1 text-xs text-slate-500 font-normal leading-tight">
+                  <div className="flex items-center gap-1 text-[11px] sm:text-xs text-slate-500 font-normal leading-tight">
                     <span>Rooms &amp; Guests</span>
-                    <i className="fa-solid fa-chevron-down text-sky-500 text-[10px]" />
+                    <i className="fa-solid fa-chevron-down text-sky-500 text-[9px] sm:text-[10px]" />
                   </div>
-                  <div className="flex items-baseline mt-1.5 leading-none truncate">
-                    <span className="text-2xl lg:text-3xl font-extrabold text-slate-900 mr-1">
+                  <div className="flex items-baseline mt-1 sm:mt-1.5 leading-none truncate">
+                    <span className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 mr-1">
                       {rooms}
                     </span>
-                    <span className="text-sm sm:text-base font-semibold text-slate-800 mr-2.5">
-                      Rooms
+                    <span className="text-xs sm:text-base font-semibold text-slate-800 mr-1.5 sm:mr-2.5">
+                      R
                     </span>
-                    <span className="text-2xl lg:text-3xl font-extrabold text-slate-900 mr-1">
-                      {adults}
+                    <span className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 mr-1">
+                      {adultsMale + adultsFemale}
                     </span>
-                    <span className="text-sm sm:text-base font-semibold text-slate-800">
-                      Adults
+                    <span className="text-xs sm:text-base font-semibold text-slate-800">
+                      A
                     </span>
                   </div>
-                  <span className="block text-xs text-slate-500 font-normal mt-1 truncate">
-                    {childrenCount > 0 ? `${childrenCount} Children` : '0 Children'}
+                  <span className="block text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 sm:mt-1 truncate">
+                    {adultsMale} Male, {adultsFemale} Female{childrenCount > 0 ? `, ${childrenCount} Ch` : ''}
                   </span>
 
-                  {/* Rooms & Guests Popover - Matches Exact Reference Image */}
+                  {/* Rooms & Guests Popover - Fully Mobile Touch Responsive */}
                   {activePopover === 'guests' && (
                     <div 
-                      className="absolute right-0 sm:left-0 top-[calc(100%+8px)] z-50 shadow-2xl rounded-2xl bg-white border border-slate-200/90 p-4 sm:p-5 w-72 sm:w-80 animate-in fade-in slide-in-from-top-1 duration-150"
+                      className="absolute left-0 top-[calc(100%+8px)] z-50 shadow-2xl rounded-2xl bg-white border border-slate-200/90 p-4 sm:p-5 w-[calc(100vw-36px)] max-w-[320px] sm:w-80 animate-in fade-in slide-in-from-top-1 duration-150"
                       onClick={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
                     >
                       <div className="space-y-4">
                         {/* Row 1: Room */}
@@ -871,56 +899,127 @@ export default function HomeScreen() {
                           <span className="font-bold text-slate-800 text-sm sm:text-base">
                             Room
                           </span>
-                          <div className="border border-slate-300 rounded-lg flex items-center justify-between w-24 h-9 px-2.5 bg-white">
+                          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl p-1">
                             <button
                               type="button"
                               disabled={rooms <= 1}
-                              onClick={() => setRooms(Math.max(1, rooms - 1))}
-                              className="text-slate-400 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed text-lg leading-none cursor-pointer select-none"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setRooms(Math.max(1, rooms - 1));
+                              }}
+                              className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-sm shadow-xs hover:bg-slate-100 active:scale-95 disabled:opacity-30 disabled:pointer-events-none cursor-pointer transition-all"
+                              aria-label="Decrease rooms"
                             >
-                              -
+                              <i className="fa-solid fa-minus text-[10px]" />
                             </button>
-                            <span className="font-bold text-slate-900 text-sm select-none">
+                            <span className="w-7 text-center font-black text-slate-900 text-sm select-none">
                               {rooms}
                             </span>
                             <button
                               type="button"
-                              onClick={() => setRooms(rooms + 1)}
-                              className="text-slate-500 hover:text-slate-900 text-lg leading-none cursor-pointer select-none"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setRooms(rooms + 1);
+                              }}
+                              className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-sm shadow-xs hover:bg-slate-100 active:scale-95 cursor-pointer transition-all"
+                              aria-label="Increase rooms"
                             >
-                              +
+                              <i className="fa-solid fa-plus text-[10px]" />
                             </button>
                           </div>
                         </div>
 
-                        {/* Row 2: Adults */}
+                        {/* Row 2: Adults (Male) */}
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-slate-800 text-sm sm:text-base">
-                            Adults
-                          </span>
-                          <div className="border border-slate-300 rounded-lg flex items-center justify-between w-24 h-9 px-2.5 bg-white">
+                          <div>
+                            <span className="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-1.5">
+                              <i className="fa-solid fa-person text-sky-600 text-xs" />
+                              <span>Adult (Male)</span>
+                            </span>
+                            <span className="block text-[10px] text-slate-400">12+ Years</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl p-1">
                             <button
                               type="button"
-                              disabled={adults <= 1}
-                              onClick={() => setAdults(Math.max(1, adults - 1))}
-                              className="text-slate-400 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed text-lg leading-none cursor-pointer select-none"
+                              disabled={adultsMale <= 0 || (adultsMale === 1 && adultsFemale === 0)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const nextM = Math.max(0, adultsMale - 1);
+                                if (nextM + adultsFemale >= 1) {
+                                  setAdultsMale(nextM);
+                                  setAdults(nextM + adultsFemale);
+                                }
+                              }}
+                              className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-sm shadow-xs hover:bg-slate-100 active:scale-95 disabled:opacity-30 disabled:pointer-events-none cursor-pointer transition-all"
+                              aria-label="Decrease male adults"
                             >
-                              -
+                              <i className="fa-solid fa-minus text-[10px]" />
                             </button>
-                            <span className="font-bold text-slate-900 text-sm select-none">
-                              {adults}
+                            <span className="w-7 text-center font-black text-slate-900 text-sm select-none">
+                              {adultsMale}
                             </span>
                             <button
                               type="button"
-                              onClick={() => setAdults(adults + 1)}
-                              className="text-slate-500 hover:text-slate-900 text-lg leading-none cursor-pointer select-none"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const nextM = adultsMale + 1;
+                                setAdultsMale(nextM);
+                                setAdults(nextM + adultsFemale);
+                              }}
+                              className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-sm shadow-xs hover:bg-slate-100 active:scale-95 cursor-pointer transition-all"
+                              aria-label="Increase male adults"
                             >
-                              +
+                              <i className="fa-solid fa-plus text-[10px]" />
                             </button>
                           </div>
                         </div>
 
-                        {/* Row 3: Children */}
+                        {/* Row 3: Adults (Female) */}
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-1.5">
+                              <i className="fa-solid fa-person-dress text-pink-600 text-xs" />
+                              <span>Adult (Female)</span>
+                            </span>
+                            <span className="block text-[10px] text-slate-400">12+ Years</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl p-1">
+                            <button
+                              type="button"
+                              disabled={adultsFemale <= 0 || (adultsFemale === 1 && adultsMale === 0)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const nextF = Math.max(0, adultsFemale - 1);
+                                if (adultsMale + nextF >= 1) {
+                                  setAdultsFemale(nextF);
+                                  setAdults(adultsMale + nextF);
+                                }
+                              }}
+                              className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-sm shadow-xs hover:bg-slate-100 active:scale-95 disabled:opacity-30 disabled:pointer-events-none cursor-pointer transition-all"
+                              aria-label="Decrease female adults"
+                            >
+                              <i className="fa-solid fa-minus text-[10px]" />
+                            </button>
+                            <span className="w-7 text-center font-black text-slate-900 text-sm select-none">
+                              {adultsFemale}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const nextF = adultsFemale + 1;
+                                setAdultsFemale(nextF);
+                                setAdults(adultsMale + nextF);
+                              }}
+                              className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-sm shadow-xs hover:bg-slate-100 active:scale-95 cursor-pointer transition-all"
+                              aria-label="Increase female adults"
+                            >
+                              <i className="fa-solid fa-plus text-[10px]" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Row 4: Children */}
                         <div className="flex items-center justify-between">
                           <div>
                             <span className="block font-bold text-slate-800 text-sm sm:text-base">
@@ -930,24 +1029,32 @@ export default function HomeScreen() {
                               0 - 17 Years Old
                             </span>
                           </div>
-                          <div className="border border-slate-300 rounded-lg flex items-center justify-between w-24 h-9 px-2.5 bg-white">
+                          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl p-1">
                             <button
                               type="button"
                               disabled={childrenCount <= 0}
-                              onClick={() => setChildrenCount(Math.max(0, childrenCount - 1))}
-                              className="text-slate-400 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed text-lg leading-none cursor-pointer select-none"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setChildrenCount(Math.max(0, childrenCount - 1));
+                              }}
+                              className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-sm shadow-xs hover:bg-slate-100 active:scale-95 disabled:opacity-30 disabled:pointer-events-none cursor-pointer transition-all"
+                              aria-label="Decrease children"
                             >
-                              -
+                              <i className="fa-solid fa-minus text-[10px]" />
                             </button>
-                            <span className="font-bold text-slate-900 text-sm select-none">
+                            <span className="w-7 text-center font-black text-slate-900 text-sm select-none">
                               {childrenCount}
                             </span>
                             <button
                               type="button"
-                              onClick={() => setChildrenCount(childrenCount + 1)}
-                              className="text-slate-500 hover:text-slate-900 text-lg leading-none cursor-pointer select-none"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setChildrenCount(childrenCount + 1);
+                              }}
+                              className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-sm shadow-xs hover:bg-slate-100 active:scale-95 cursor-pointer transition-all"
+                              aria-label="Increase children"
                             >
-                              +
+                              <i className="fa-solid fa-plus text-[10px]" />
                             </button>
                           </div>
                         </div>
@@ -956,8 +1063,11 @@ export default function HomeScreen() {
                       {/* Apply / Close Button - Minimal Black */}
                       <button
                         type="button"
-                        onClick={() => setActivePopover(null)}
-                        className="w-full mt-4 py-2 rounded-lg bg-black hover:bg-zinc-800 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActivePopover(null);
+                        }}
+                        className="w-full mt-4 py-2.5 rounded-xl bg-black hover:bg-zinc-800 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-xs active:scale-[0.98]"
                       >
                         Apply
                       </button>
@@ -967,16 +1077,16 @@ export default function HomeScreen() {
 
                 {/* 5. Price Per Night */}
                 <div 
-                  className="lg:col-span-2 p-3.5 sm:px-4 sm:pt-4 sm:pb-8 hover:bg-blue-50/40 transition-colors cursor-pointer relative"
+                  className="col-span-1 lg:col-span-2 p-2.5 sm:px-4 sm:pt-4 sm:pb-8 hover:bg-blue-50/40 transition-colors cursor-pointer relative"
                   onClick={() => setActivePopover(activePopover === 'price' ? null : 'price')}
                 >
-                  <span className="block text-xs text-slate-500 font-normal leading-tight">
+                  <span className="block text-[11px] sm:text-xs text-slate-500 font-normal leading-tight">
                     Price Per Night
                   </span>
-                  <span className="block text-xs sm:text-sm font-semibold text-slate-800 mt-2 truncate">
-                    {priceRange}
+                  <span className="block text-xs sm:text-sm font-semibold text-slate-800 mt-1 sm:mt-2 truncate">
+                    {priceRange.split(',')[0]}
                   </span>
-                  <span className="block text-[10px] text-slate-400 mt-1">
+                  <span className="block text-[10px] text-slate-400 mt-0.5 sm:mt-1 truncate">
                     Select budget
                   </span>
 
@@ -985,6 +1095,7 @@ export default function HomeScreen() {
                     <div 
                       className="absolute right-0 top-[calc(100%+8px)] z-50 bg-white rounded-xl shadow-2xl border border-slate-200 p-2 w-56 animate-in fade-in slide-in-from-top-1 duration-150"
                       onClick={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
                     >
                       <span className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2 py-1">
                         Select Price Range
@@ -1020,12 +1131,13 @@ export default function HomeScreen() {
               </div>
 
               {/* Centered Floating "SEARCH" Button - Minimalist Black */}
-              <div className="absolute -bottom-6 sm:-bottom-7 md:-bottom-8 left-1/2 -translate-x-1/2 z-20">
+              <div className="absolute -bottom-5 sm:-bottom-7 md:-bottom-8 left-1/2 -translate-x-1/2 z-20">
                 <button
                   type="button"
                   onClick={handleSearchSubmit}
-                  className="px-10 sm:px-14 py-2.5 sm:py-3 rounded-full bg-black hover:bg-zinc-800 text-white font-black text-sm sm:text-base tracking-wider uppercase shadow-md hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap border border-black"
+                  className="px-8 sm:px-14 py-2 sm:py-3 rounded-full bg-black hover:bg-zinc-800 text-white font-black text-xs sm:text-base tracking-wider uppercase shadow-md hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap border border-black"
                 >
+                  <i className="fa-solid fa-magnifying-glass text-xs sm:text-sm" />
                   <span>SEARCH</span>
                 </button>
               </div>
@@ -1046,19 +1158,19 @@ export default function HomeScreen() {
         {/* 3. BROWSE BY PROPERTY STYLE (Minimal Luxury Carousel)     */}
         {/* ========================================================= */}
         <section>
-          <div className="flex items-end justify-between mb-5">
+          <div className="flex items-end justify-between mb-3.5 sm:mb-5">
             <div>
-              <span className="text-[11px] font-black uppercase tracking-wider text-black flex items-center gap-1.5 mb-1">
+              <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-black flex items-center gap-1.5 mb-0.5 sm:mb-1">
                 ✦ CURATED ACCOMMODATION STYLES
               </span>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">
                 Browse by property style
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              <p className="text-[11px] sm:text-sm text-slate-500 mt-0.5 line-clamp-1 sm:line-clamp-none">
                 Handpicked collections tailored to your vacation mindset
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -1078,7 +1190,7 @@ export default function HomeScreen() {
               <button
                 type="button"
                 onClick={() => scrollPropertyStyles('left')}
-                className="w-9 h-9 rounded-full border border-zinc-200 hover:border-black hover:bg-black hover:text-white bg-white flex items-center justify-center text-xs text-zinc-700 transition-all cursor-pointer shadow-xs active:scale-95"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-zinc-200 hover:border-black hover:bg-black hover:text-white bg-white flex items-center justify-center text-[10px] sm:text-xs text-zinc-700 transition-all cursor-pointer shadow-xs active:scale-95"
                 aria-label="Previous property style"
               >
                 <i className="fa-solid fa-chevron-left" />
@@ -1086,7 +1198,7 @@ export default function HomeScreen() {
               <button
                 type="button"
                 onClick={() => scrollPropertyStyles('right')}
-                className="w-9 h-9 rounded-full border border-zinc-200 hover:border-black hover:bg-black hover:text-white bg-white flex items-center justify-center text-xs text-zinc-700 transition-all cursor-pointer shadow-xs active:scale-95"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-zinc-200 hover:border-black hover:bg-black hover:text-white bg-white flex items-center justify-center text-[10px] sm:text-xs text-zinc-700 transition-all cursor-pointer shadow-xs active:scale-95"
                 aria-label="Next property style"
               >
                 <i className="fa-solid fa-chevron-right" />
@@ -1096,7 +1208,7 @@ export default function HomeScreen() {
 
           <div 
             ref={propertyStylesRef}
-            className="flex items-stretch gap-3.5 overflow-x-auto no-scrollbar py-1 scroll-smooth"
+            className="flex items-stretch gap-4 sm:gap-3.5 overflow-x-auto no-scrollbar py-1 pb-3 sm:pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scroll-smooth snap-x snap-mandatory"
           >
             {dynamicPropertyStyles.map((item) => {
               const isSelected = selectedPropertyStyle === item.label;
@@ -1117,23 +1229,24 @@ export default function HomeScreen() {
                       showToast(`Selected ${item.label} (${item.count}) • Click again to explore stays`);
                     }
                   }}
-                  className={`w-44 sm:w-52 shrink-0 p-5 rounded-2xl transition-all duration-300 text-center group cursor-pointer flex flex-col items-center justify-between relative select-none ${
+                  className={`shrink-0 transition-all duration-300 text-center group cursor-pointer flex flex-col items-center justify-between relative select-none snap-start active:scale-95 ${
+                    /* Mobile: Clean icon + text without card box. Desktop: Luxury card with borders & shadow */
                     isSelected
-                      ? 'bg-white border-2 border-black shadow-[0_8px_24px_rgba(0,0,0,0.08)] -translate-y-1.5'
-                      : 'bg-white border border-zinc-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:border-black hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:-translate-y-1'
+                      ? 'w-20 sm:w-44 md:w-52 p-1 sm:p-5 bg-transparent sm:bg-white border-0 sm:border-2 border-black sm:shadow-[0_4px_16px_rgba(0,0,0,0.08)] sm:rounded-2xl sm:-translate-y-1'
+                      : 'w-20 sm:w-44 md:w-52 p-1 sm:p-5 bg-transparent sm:bg-white border-0 sm:border border-zinc-200/90 sm:shadow-[0_1px_3px_rgba(0,0,0,0.03)] sm:rounded-2xl sm:hover:border-black sm:hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] sm:hover:-translate-y-0.5'
                   }`}
                 >
-                  {/* Subtle active pill indicator */}
+                  {/* Subtle active pill indicator on desktop only */}
                   {isSelected && (
-                    <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-black ring-2 ring-white" />
+                    <span className="hidden sm:block absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-black ring-2 ring-white" />
                   )}
 
-                  {/* Icon squircle */}
+                  {/* Icon: round on mobile, squircle on desktop */}
                   <div
-                    className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl mb-3 transition-all duration-300 ${
+                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full sm:rounded-2xl flex items-center justify-center text-lg sm:text-xl mb-1.5 sm:mb-3 transition-all duration-300 ${
                       isSelected
-                        ? 'bg-black text-white shadow-xs scale-105'
-                        : 'bg-zinc-50 border border-zinc-200/80 text-zinc-800 group-hover:bg-black group-hover:text-white group-hover:border-black group-hover:scale-105 group-hover:shadow-xs'
+                        ? 'bg-black text-white shadow-xs scale-105 ring-2 ring-black/10 sm:ring-0'
+                        : 'bg-zinc-100 sm:bg-zinc-50 border border-transparent sm:border-zinc-200/80 text-zinc-800 group-hover:bg-black group-hover:text-white group-hover:scale-105'
                     }`}
                   >
                     <i className={`fa-solid ${item.icon}`} />
@@ -1141,16 +1254,16 @@ export default function HomeScreen() {
 
                   {/* Label */}
                   <strong
-                    className={`block text-[13px] font-bold tracking-tight transition-colors ${
-                      isSelected ? 'text-black font-extrabold' : 'text-zinc-900 group-hover:text-black'
+                    className={`block text-[11px] sm:text-[13px] font-bold tracking-tight transition-colors text-center max-w-[76px] sm:max-w-none truncate ${
+                      isSelected ? 'text-black font-extrabold' : 'text-zinc-700 sm:text-zinc-900 group-hover:text-black'
                     }`}
                   >
                     {item.label}
                   </strong>
 
-                  {/* Stays Count Badge */}
+                  {/* Stays Count Badge (Desktop only) */}
                   <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] mt-2 transition-colors border ${
+                    className={`hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] mt-2 transition-colors border ${
                       isSelected
                         ? 'font-bold bg-zinc-100 text-black border-zinc-300'
                         : 'font-medium text-zinc-500 bg-zinc-50 border-zinc-200/60 group-hover:bg-zinc-100 group-hover:text-black group-hover:border-zinc-300'
@@ -1290,7 +1403,7 @@ export default function HomeScreen() {
                       </div>
                     </div>
 
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-50 text-sky-700 border border-sky-200/80 font-bold text-xs group-hover:bg-sky-500 group-hover:text-white group-hover:border-sky-500 transition-all duration-200 shadow-2xs">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white text-black border border-black font-bold text-xs group-hover:bg-black group-hover:text-white group-hover:border-black transition-all duration-200 shadow-xs">
                       <span>View Hotels</span>
                       <i className="fa-solid fa-arrow-right text-[10px] group-hover:translate-x-0.5 transition-transform" />
                     </span>
@@ -1440,37 +1553,34 @@ export default function HomeScreen() {
                         <div
                           key={hotel.id}
                           onClick={() => handleCardClick(hotel)}
-                          className="bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs hover:shadow-lg hover:border-slate-300 transition-all duration-300 flex flex-col justify-between group cursor-pointer"
+                          className="bg-white rounded-md border border-slate-200/90 overflow-hidden shadow-xs hover:shadow-lg hover:border-slate-300 transition-all duration-300 flex flex-col justify-between group cursor-pointer"
                         >
                           <div>
-                            {/* Compact Media container (16/9 Widescreen) */}
-                            <div className="relative aspect-[16/9] overflow-hidden bg-slate-100">
-                              <img
-                                src={hotel.image}
-                                alt={hotel.name}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                              />
-                              {/* Top Left Discount Badge */}
-                              <div className="absolute top-2.5 left-2.5">
+                            {/* Touch-Swipe Image Carousel (16/9 Widescreen) */}
+                            <HotelCardImageCarousel
+                              hotel={hotel}
+                              hotelName={hotel.name}
+                              aspectRatio="aspect-[16/9]"
+                              overlayTopLeft={hotel.badge ? (
                                 <span className="px-2 py-0.5 rounded-md bg-rose-600 text-white font-extrabold text-[10px] shadow-xs inline-flex items-center gap-1">
                                   <i className="fa-solid fa-bolt text-amber-300 text-[9px]" />
                                   <span>{hotel.badge}</span>
                                 </span>
-                              </div>
-
-                              {/* Top Right Heart Wishlist Button */}
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleFavorite(hotel.id);
-                                }}
-                                className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/95 backdrop-blur-xs shadow-xs flex items-center justify-center text-slate-600 hover:text-rose-500 hover:bg-white transition-all cursor-pointer"
-                                aria-label="Save to wishlist"
-                              >
-                                <i className={`${isFav ? 'fa-solid text-rose-500' : 'fa-regular'} fa-heart text-[11px]`} />
-                              </button>
-                            </div>
+                              ) : null}
+                              overlayTopRight={(
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleFavorite(hotel.id);
+                                  }}
+                                  className="w-7 h-7 rounded-full bg-white/95 backdrop-blur-xs shadow-xs flex items-center justify-center text-slate-600 hover:text-rose-500 hover:bg-white transition-all cursor-pointer"
+                                  aria-label="Save to wishlist"
+                                >
+                                  <i className={`${isFav ? 'fa-solid text-rose-500' : 'fa-regular'} fa-heart text-[11px]`} />
+                                </button>
+                              )}
+                            />
 
                             {/* Card Body - Streamlined and Compact */}
                             <div className="p-3.5 sm:p-4 pb-2">
@@ -1491,18 +1601,24 @@ export default function HomeScreen() {
                                 <span className="truncate">{hotel.locality}</span>
                               </div>
 
-                              {/* Row 3: Hotel Features (Single Inline Line) */}
-                              <div className="flex items-center gap-2 mt-2 text-[11px] font-semibold text-slate-600 truncate">
-                                <span className="flex items-center gap-1 shrink-0 text-slate-700">
-                                  <i className={`${hotel.perk1Icon || 'fa-solid fa-circle-check text-emerald-600'} text-[10px]`} />
-                                  <span>{hotel.perk1}</span>
-                                </span>
-                                <span className="text-slate-300">•</span>
-                                <span className="truncate flex items-center gap-1 text-slate-600">
-                                  <i className={`${hotel.perk2Icon || 'fa-solid fa-wifi text-sky-600'} text-[10px]`} />
-                                  <span className="truncate">{hotel.perk2}</span>
-                                </span>
-                              </div>
+                              {/* Row 3: Hotel Features (Single Inline Line - 100% Dynamic) */}
+                              {(hotel.perk1 || hotel.perk2) && (
+                                <div className="flex items-center gap-2 mt-2 text-[11px] font-semibold text-slate-600 truncate">
+                                  {hotel.perk1 && (
+                                    <span className="flex items-center gap-1 shrink-0 text-slate-700">
+                                      <i className={`${hotel.perk1Icon || 'fa-solid fa-circle-check text-emerald-600'} text-[10px]`} />
+                                      <span>{hotel.perk1}</span>
+                                    </span>
+                                  )}
+                                  {hotel.perk1 && hotel.perk2 && <span className="text-slate-300">•</span>}
+                                  {hotel.perk2 && (
+                                    <span className="truncate flex items-center gap-1 text-slate-600">
+                                      <i className={`${hotel.perk2Icon || 'fa-solid fa-sparkles text-sky-600'} text-[10px]`} />
+                                      <span className="truncate">{hotel.perk2}</span>
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -1529,7 +1645,7 @@ export default function HomeScreen() {
                                   e.stopPropagation();
                                   handleCardClick(hotel);
                                 }}
-                                className="py-2 px-3.5 rounded-xl bg-slate-900 hover:bg-black active:scale-[0.98] text-white text-xs font-bold shadow-xs hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer group-hover:bg-[#0ea5e9] shrink-0"
+                                className="py-2 px-3.5 rounded-md bg-white text-black border border-black hover:bg-black hover:text-white group-hover:bg-black group-hover:text-white active:scale-[0.98] text-xs font-bold shadow-xs hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
                               >
                                 <span>Book</span>
                                 <i className="fa-solid fa-arrow-right text-[10px] group-hover:translate-x-0.5 transition-transform" />

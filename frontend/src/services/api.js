@@ -151,3 +151,56 @@ export const payoutAPI = {
   execute: (body) => request('/payouts/execute', { method: 'POST', body: JSON.stringify(body) }),
   getHotelierLedger: () => request('/payouts/hotelier-ledger'),
 };
+
+// ============ UPLOAD (CLOUDINARY) ============
+export const uploadAPI = {
+  getConfig: () => request('/upload/config'),
+  uploadImage: async (fileOrBase64, folder = 'hotel_factories/hotels') => {
+    if (typeof fileOrBase64 === 'string') {
+      return request('/upload/image', {
+        method: 'POST',
+        body: JSON.stringify({ image: fileOrBase64, folder }),
+      });
+    }
+
+    const formData = new FormData();
+    formData.append('image', fileOrBase64);
+    formData.append('folder', folder);
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('hf_token') : null;
+    const res = await fetch(`${API_BASE}/upload/image`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.message || data.error || `Upload failed (${res.status})`);
+    }
+    return data;
+  },
+  uploadMultiple: async (files, folder = 'hotel_factories/hotels') => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('images', file));
+    formData.append('folder', folder);
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('hf_token') : null;
+    const res = await fetch(`${API_BASE}/upload/multiple`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.message || data.error || `Multiple upload failed (${res.status})`);
+    }
+    return data;
+  },
+  deleteImage: (publicId) => request(`/upload/${encodeURIComponent(publicId)}`, { method: 'DELETE' }),
+};

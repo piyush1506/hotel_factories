@@ -9,7 +9,41 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
-  allowedDevOrigins: ['*.trycloudflare.com', 'localhost:3001', '10.33.251.95:3001', '*.loca.lt'],
+  // Universal wildcard whitelist: matches ANY tunnel domain, subdomain, or local network IP
+  allowedDevOrigins: [
+    '**.com',
+    '**.io',
+    '**.app',
+    '**.net',
+    '**.org',
+    '**.dev',
+    '**.lt',
+    '**.me',
+    '**.cc',
+    '**.co',
+    '**.xyz',
+    '**.link',
+    '**.run',
+    '**.site',
+    '**.online',
+    '**.tech',
+    '**.localhost',
+    '*.*.*.*',
+    'localhost:3001',
+    '127.0.0.1:3001',
+  ],
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET,POST,PUT,PATCH,DELETE,OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: '*' },
+        ],
+      },
+    ];
+  },
   async rewrites() {
     const backendUrl = process.env.BACKEND_API_URL || 'http://127.0.0.1:5050';
     return [
@@ -25,6 +59,11 @@ const nextConfig = {
   },
   images: {
     remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+        pathname: '/**',
+      },
       {
         protocol: 'https',
         hostname: 'images.unsplash.com',

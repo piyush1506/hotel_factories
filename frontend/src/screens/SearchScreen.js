@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import CustomDatePicker from '../components/CustomDatePicker';
+import HotelCardImageCarousel from '../components/common/HotelCardImageCarousel';
 import { getDefaultDates } from '../utils/helpers';
 
 export default function SearchScreen() {
@@ -31,15 +32,19 @@ export default function SearchScreen() {
   const [checkOutDate, setCheckOutDate] = useState(() => searchParams?.checkOutDate || getDefaultDates().checkOut);
   const [rooms, setRooms] = useState(() => searchParams?.rooms || 1);
   const [adults, setAdults] = useState(() => searchParams?.adults || 2);
+  const [adultsMale, setAdultsMale] = useState(() => searchParams?.adultsMale !== undefined ? Number(searchParams.adultsMale) : 1);
+  const [adultsFemale, setAdultsFemale] = useState(() => searchParams?.adultsFemale !== undefined ? Number(searchParams.adultsFemale) : 1);
   const [childrenCount, setChildrenCount] = useState(() => searchParams?.childrenCount || 0);
   const [activePopover, setActivePopover] = useState(null); // 'dest' | 'checkin' | 'checkout' | 'guests'
   const topBarRef = useRef(null);
 
   // Sync internal state when searchParams changes from outside
   useEffect(() => {
-    if (searchParams?.adults) setAdults(searchParams.adults);
-    if (searchParams?.childrenCount !== undefined) setChildrenCount(searchParams.childrenCount);
-    if (searchParams?.rooms) setRooms(searchParams.rooms);
+    if (searchParams?.adultsMale !== undefined) setAdultsMale(Number(searchParams.adultsMale));
+    if (searchParams?.adultsFemale !== undefined) setAdultsFemale(Number(searchParams.adultsFemale));
+    if (searchParams?.adults) setAdults(Number(searchParams.adults));
+    if (searchParams?.childrenCount !== undefined) setChildrenCount(Number(searchParams.childrenCount));
+    if (searchParams?.rooms) setRooms(Number(searchParams.rooms));
     if (searchParams?.checkInDate) setCheckInDate(searchParams.checkInDate);
     if (searchParams?.checkOutDate) setCheckOutDate(searchParams.checkOutDate);
   }, [searchParams]);
@@ -54,8 +59,50 @@ export default function SearchScreen() {
   const [minRating, setMinRating] = useState(0); // 0, 3.5, 4.0, 4.5
   const [selectedCategory, setSelectedCategory] = useState(() => contextCategory || 'All');
   const [activeDealFilter, setActiveDealFilter] = useState('all'); // 'all' | 'flash' | 'budget' | 'under999' | 'exclusive'
+  const [showDealCards, setShowDealCards] = useState(true);
   const [activeQuickChip, setActiveQuickChip] = useState(null);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+
+  const localityOptions = useMemo(() => {
+    const set = new Set(['Bhilwara', 'Jaipur', 'Udaipur', 'Goa', 'Manali']);
+    if (Array.isArray(hotels)) {
+      hotels.forEach(h => {
+        if (h.city) set.add(h.city);
+      });
+    }
+    return Array.from(set);
+  }, [hotels]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (selectedPriceTier !== 'all') count++;
+    if (minRating > 0) count++;
+    count += selectedLocalities.length;
+    count += selectedAmenities.length;
+    if (selectedCategory !== 'All') count++;
+    if (activeDealFilter !== 'all') count++;
+    if (aiFilterQuery && aiFilterQuery.trim()) count++;
+    return count;
+  }, [selectedPriceTier, minRating, selectedLocalities, selectedAmenities, selectedCategory, activeDealFilter, aiFilterQuery]);
+
+  const dynamicFilterAmenities = useMemo(() => {
+    const counts = {};
+    if (Array.isArray(hotels)) {
+      hotels.forEach(h => {
+        if (Array.isArray(h.amenities)) {
+          h.amenities.forEach(a => {
+            const trimmed = a.trim();
+            if (trimmed) {
+              counts[trimmed] = (counts[trimmed] || 0) + 1;
+            }
+          });
+        }
+      });
+    }
+    const sorted = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+    return sorted.length > 0 ? sorted.slice(0, 10) : [];
+  }, [hotels]);
 
   // Stable clean categories matching the platform theme
   const availableCategories = useMemo(() => {
@@ -181,7 +228,9 @@ export default function SearchScreen() {
     setSearchParams({
       checkInDate,
       checkOutDate,
-      adults,
+      adults: adultsMale + adultsFemale,
+      adultsMale,
+      adultsFemale,
       rooms,
       childrenCount
     });
@@ -194,7 +243,9 @@ export default function SearchScreen() {
         ...prev,
         checkInDate,
         checkOutDate,
-        adults,
+        adults: adultsMale + adultsFemale,
+        adultsMale,
+        adultsFemale,
         rooms,
         childrenCount
       }));
@@ -510,7 +561,7 @@ export default function SearchScreen() {
                   No. of rooms &amp; guests
                 </span>
                 <span className="block font-bold text-slate-900 text-sm md:text-base leading-none truncate">
-                  {rooms} Room · {adults} Adults
+                  {rooms} Room · {adultsMale + adultsFemale} Adults ({adultsMale}M, {adultsFemale}F)
                 </span>
               </div>
 
@@ -544,22 +595,77 @@ export default function SearchScreen() {
                       </div>
                     </div>
 
-                    {/* Adults Stepper */}
+                    {/* Adults (Male) Stepper */}
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-800 text-sm">Adults</span>
+                      <div>
+                        <span className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                          <i className="fa-solid fa-person text-sky-600 text-xs" />
+                          <span>Adult (Male)</span>
+                        </span>
+                        <span className="block text-[10px] text-slate-400">12+ Years</span>
+                      </div>
                       <div className="border border-slate-300 rounded-lg flex items-center justify-between w-24 h-9 px-2.5 bg-white">
                         <button
                           type="button"
-                          disabled={adults <= 1}
-                          onClick={() => setAdults(Math.max(1, adults - 1))}
+                          disabled={adultsMale <= 0 || (adultsMale === 1 && adultsFemale === 0)}
+                          onClick={() => {
+                            const nextM = Math.max(0, adultsMale - 1);
+                            if (nextM + adultsFemale >= 1) {
+                              setAdultsMale(nextM);
+                              setAdults(nextM + adultsFemale);
+                            }
+                          }}
                           className="text-slate-400 hover:text-slate-800 disabled:opacity-30 text-lg leading-none cursor-pointer"
                         >
                           -
                         </button>
-                        <span className="font-bold text-slate-900 text-sm">{adults}</span>
+                        <span className="font-bold text-slate-900 text-sm">{adultsMale}</span>
                         <button
                           type="button"
-                          onClick={() => setAdults(adults + 1)}
+                          onClick={() => {
+                            const nextM = adultsMale + 1;
+                            setAdultsMale(nextM);
+                            setAdults(nextM + adultsFemale);
+                          }}
+                          className="text-slate-500 hover:text-slate-900 text-lg leading-none cursor-pointer"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Adults (Female) Stepper */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                          <i className="fa-solid fa-person-dress text-pink-600 text-xs" />
+                          <span>Adult (Female)</span>
+                        </span>
+                        <span className="block text-[10px] text-slate-400">12+ Years</span>
+                      </div>
+                      <div className="border border-slate-300 rounded-lg flex items-center justify-between w-24 h-9 px-2.5 bg-white">
+                        <button
+                          type="button"
+                          disabled={adultsFemale <= 0 || (adultsFemale === 1 && adultsMale === 0)}
+                          onClick={() => {
+                            const nextF = Math.max(0, adultsFemale - 1);
+                            if (adultsMale + nextF >= 1) {
+                              setAdultsFemale(nextF);
+                              setAdults(adultsMale + nextF);
+                            }
+                          }}
+                          className="text-slate-400 hover:text-slate-800 disabled:opacity-30 text-lg leading-none cursor-pointer"
+                        >
+                          -
+                        </button>
+                        <span className="font-bold text-slate-900 text-sm">{adultsFemale}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextF = adultsFemale + 1;
+                            setAdultsFemale(nextF);
+                            setAdults(adultsMale + nextF);
+                          }}
                           className="text-slate-500 hover:text-slate-900 text-lg leading-none cursor-pointer"
                         >
                           +
@@ -605,15 +711,16 @@ export default function SearchScreen() {
               )}
             </div>
 
-            {/* Segment 5: Search Button - Brand Coral Red */}
-            <div className="p-2 sm:p-2.5 flex items-center justify-end lg:justify-center shrink-0">
+            {/* Segment 5: Search Button - Enhanced Professional Center CTA */}
+            <div className="p-3 lg:p-2.5 flex items-center justify-center shrink-0 w-full lg:w-auto">
               <button
                 type="button"
                 onClick={handleApplySearch}
                 aria-label="Search properties"
-                className="w-12 h-12 lg:w-11 lg:h-11 rounded-full bg-[#0ea5e9] hover:bg-[#0284c7] text-white flex items-center justify-center shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer shrink-0"
+                className="w-full lg:w-auto px-8 lg:px-6 py-3 lg:py-2.5 rounded-xl lg:rounded-full bg-black hover:bg-zinc-800 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer shrink-0"
               >
-                <i className="fa-solid fa-magnifying-glass text-base"></i>
+                <i className="fa-solid fa-magnifying-glass text-xs"></i>
+                <span>Search</span>
               </button>
             </div>
           </div>
@@ -621,680 +728,73 @@ export default function SearchScreen() {
       </section>
 
       {/* =========================================================================
-          MAIN 2-COLUMN VIEWPORT: LEFT FILTERS SIDEBAR + RIGHT RESULTS AREA
+          MAIN FULL-WIDTH RESULTS AREA
           ========================================================================= */}
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6">
-        <div className="flex flex-col lg:flex-row gap-6 items-start">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-5">
+        <main className="w-full space-y-4">
           
-          {/* ======================= LEFT COLUMN: SIDEBAR (Desktop) ======================= */}
-          <aside className="hidden lg:block lg:w-[280px] xl:w-[300px] shrink-0 space-y-4">
-            
-            {/* 1. Simple Keyword Search Card */}
-            <div className="rounded-2xl p-4 bg-white border border-slate-200/90 shadow-2xs">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2 font-extrabold text-slate-900 text-sm">
-                  <i className="fa-solid fa-magnifying-glass text-slate-700 text-xs" />
-                  <span>Search by Name &amp; Area</span>
-                </div>
-                {aiFilterQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setAiFilterQuery('')}
-                    className="text-[11px] font-bold text-[#0ea5e9] hover:underline cursor-pointer"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-
-              {/* Clean Simple Search Input */}
-              <div className="bg-slate-50 rounded-xl border border-slate-200 focus-within:border-slate-800 focus-within:bg-white focus-within:ring-1 focus-within:ring-slate-800 px-3 py-2 flex items-center gap-2 transition-all shadow-2xs">
-                <i className="fa-solid fa-search text-slate-400 text-xs shrink-0" />
-                <input
-                  type="text"
-                  value={aiFilterQuery}
-                  onChange={(e) => setAiFilterQuery(e.target.value)}
-                  placeholder="Search hotel name, location, amenity..."
-                  className="w-full bg-transparent text-xs text-slate-800 placeholder:text-slate-400 outline-none font-medium"
-                />
-                {aiFilterQuery && (
-                  <button
-                    type="button"
-                    aria-label="Clear search input"
-                    onClick={() => setAiFilterQuery('')}
-                    className="w-5 h-5 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center text-[10px] transition-colors cursor-pointer shrink-0"
-                  >
-                    <i className="fa-solid fa-xmark" />
-                  </button>
-                )}
-              </div>
+          {/* Header Bar: Result Count, Sort By & Dedicated Filter Icon Trigger */}
+          <div className="bg-white rounded-md border border-slate-200/90 px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-extrabold text-slate-900">
+                {sortedHotels.length} {sortedHotels.length === 1 ? 'property' : 'properties'} found
+              </span>
+              {destinationInput && (
+                <span className="text-xs text-slate-500 font-medium hidden sm:inline">
+                  in <strong className="text-slate-800">{destinationInput}</strong>
+                </span>
+              )}
             </div>
 
-            {/* 2. Main Filters Card */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs">
-              {/* Header */}
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
-                <h3 className="text-base font-extrabold text-slate-900 tracking-tight">Filters</h3>
-                {(selectedLocalities.length > 0 || selectedAmenities.length > 0 || selectedPriceTier !== 'all' || minRating > 0 || selectedCategory !== 'All') && (
-                  <button 
-                    type="button"
-                    onClick={handleClearAllFilters}
-                    className="text-xs font-bold text-[#0ea5e9] hover:underline cursor-pointer"
-                  >
-                    Clear all
-                  </button>
-                )}
-              </div>
-
-              {/* Quick Filter Pill Buttons (Matches Reference Image) */}
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                {[
-                  { id: 'price', label: 'Price per night' },
-                  { id: 'breakfast', label: 'Free Breakfast' },
-                  { id: 'localities', label: 'Localities' },
-                  { id: 'rating', label: 'Customer Rating' }
-                ].map(chip => (
-                  <button
-                    key={chip.id}
-                    type="button"
-                    onClick={() => {
-                      if (chip.id === 'breakfast') {
-                        handleAmenityToggle('Breakfast');
-                      } else {
-                        setActiveQuickChip(activeQuickChip === chip.id ? null : chip.id);
-                        toggleSection(chip.id === 'rating' ? 'rating' : chip.id === 'localities' ? 'localities' : 'price');
-                      }
-                    }}
-                    className={`px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
-                      (chip.id === 'breakfast' && selectedAmenities.some(a => a.toLowerCase().includes('breakfast'))) || activeQuickChip === chip.id
-                        ? 'border-[#0ea5e9] bg-sky-50 text-[#0ea5e9]'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
-                    }`}
-                  >
-                    {chip.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Accordion 1: Price per night */}
-              <div className="border-t border-slate-100 pt-3 mb-3">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              {/* View Toggle (Grid / List) */}
+              <div className="hidden sm:flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-md border border-slate-200/80">
                 <button
                   type="button"
-                  className="w-full flex items-center justify-between text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-2 cursor-pointer"
-                  onClick={() => toggleSection('price')}
+                  onClick={() => setViewMode('grid')}
+                  className={`px-2.5 py-1 rounded text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    viewMode === 'grid'
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                  title="Grid view"
                 >
-                  <span>Price per night</span>
-                  <i className={`fa-solid fa-chevron-down text-slate-400 text-[10px] transition-transform ${openSections.price ? 'rotate-180' : ''}`}></i>
+                  <i className="fa-solid fa-table-cells-large text-[11px]" />
+                  <span>Grid</span>
                 </button>
-                {openSections.price && (
-                  <div className="space-y-1.5 pt-1 text-xs">
-                    {[
-                      { id: 'all', label: 'All Prices' },
-                      { id: 'under2k', label: 'Under ₹2,000' },
-                      { id: '2k-4k', label: '₹2,000 - ₹4,000' },
-                      { id: '4k-8k', label: '₹4,000 - ₹8,000' },
-                      { id: 'above8k', label: '₹8,000+' }
-                    ].map(tier => (
-                      <label key={tier.id} className="flex items-center gap-2 cursor-pointer text-slate-600 hover:text-slate-900 py-0.5">
-                        <input
-                          type="radio"
-                          name="priceTier"
-                          checked={selectedPriceTier === tier.id}
-                          onChange={() => setSelectedPriceTier(tier.id)}
-                          className="accent-[#0ea5e9] cursor-pointer"
-                        />
-                        <span>{tier.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Accordion 2: Customer Rating */}
-              <div className="border-t border-slate-100 pt-3 mb-3">
                 <button
                   type="button"
-                  className="w-full flex items-center justify-between text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-2 cursor-pointer"
-                  onClick={() => toggleSection('rating')}
+                  onClick={() => setViewMode('list')}
+                  className={`px-2.5 py-1 rounded text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    viewMode === 'list'
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                  title="List view"
                 >
-                  <span>Customer Rating</span>
-                  <i className={`fa-solid fa-chevron-down text-slate-400 text-[10px] transition-transform ${openSections.rating ? 'rotate-180' : ''}`}></i>
-                </button>
-                {openSections.rating && (
-                  <div className="space-y-1.5 pt-1 text-xs">
-                    {[
-                      { val: 0, label: 'All Ratings' },
-                      { val: 4.5, label: '4.5+ Exceptional' },
-                      { val: 4.0, label: '4.0+ Very Good' },
-                      { val: 3.5, label: '3.5+ Good' }
-                    ].map(r => (
-                      <label key={r.val} className="flex items-center gap-2 cursor-pointer text-slate-600 hover:text-slate-900 py-0.5">
-                        <input
-                          type="radio"
-                          name="ratingFilter"
-                          checked={minRating === r.val}
-                          onChange={() => setMinRating(r.val)}
-                          className="accent-[#0ea5e9] cursor-pointer"
-                        />
-                        <span className="flex items-center gap-1">
-                          {r.val > 0 && <span className="font-bold text-emerald-700">★</span>}
-                          {r.label}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Accordion 3: Localities & Cities */}
-              <div className="border-t border-slate-100 pt-3 mb-3">
-                <button
-                  type="button"
-                  className="w-full flex items-center justify-between text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-2 cursor-pointer"
-                  onClick={() => toggleSection('localities')}
-                >
-                  <span>Popular Localities</span>
-                  <i className={`fa-solid fa-chevron-down text-slate-400 text-[10px] transition-transform ${openSections.localities ? 'rotate-180' : ''}`}></i>
-                </button>
-                {openSections.localities && (
-                  <div className="space-y-1.5 pt-1 text-xs">
-                    {['Bhilwara', 'Jaipur', 'Udaipur', 'Goa', 'Manali'].map(loc => (
-                      <label key={loc} className="flex items-center gap-2 cursor-pointer text-slate-600 hover:text-slate-900 py-0.5">
-                        <input
-                          type="checkbox"
-                          checked={selectedLocalities.includes(loc)}
-                          onChange={() => handleLocalityToggle(loc)}
-                          className="accent-[#0ea5e9] rounded cursor-pointer"
-                        />
-                        <span>{loc}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Accordion 4: Property Type / Category */}
-              <div className="border-t border-slate-100 pt-3 mb-3">
-                <button
-                  type="button"
-                  className="w-full flex items-center justify-between text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-2 cursor-pointer"
-                  onClick={() => toggleSection('propertyType')}
-                >
-                  <span>Property Type</span>
-                  <i className={`fa-solid fa-chevron-down text-slate-400 text-[10px] transition-transform ${openSections.propertyType ? 'rotate-180' : ''}`}></i>
-                </button>
-                {openSections.propertyType && (
-                  <div className="space-y-1.5 pt-1 text-xs">
-                    {availableCategories.map(cat => {
-                      const count = cat === 'All' 
-                        ? (hotels?.length || 0)
-                        : (hotels?.filter(h => h.category === cat).length || 0);
-                      return (
-                        <label key={cat} className="flex items-center justify-between cursor-pointer text-slate-600 hover:text-slate-900 py-0.5 group">
-                          <span className="flex items-center gap-2">
-                            <input
-                              type="radio"
-                              name="categoryFilter"
-                              checked={selectedCategory === cat}
-                              onChange={() => setSelectedCategory(cat)}
-                              className="accent-[#0ea5e9] cursor-pointer"
-                            />
-                            <span>{cat}</span>
-                          </span>
-                          <span className="text-[10px] text-slate-400 group-hover:text-slate-600 font-semibold">
-                            {count}
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Accordion 5: Amenities */}
-              <div className="border-t border-slate-100 pt-3">
-                <button
-                  type="button"
-                  className="w-full flex items-center justify-between text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-2 cursor-pointer"
-                  onClick={() => toggleSection('amenities')}
-                >
-                  <span>Popular Amenities</span>
-                  <i className={`fa-solid fa-chevron-down text-slate-400 text-[10px] transition-transform ${openSections.amenities ? 'rotate-180' : ''}`}></i>
-                </button>
-                {openSections.amenities && (
-                  <div className="space-y-1.5 pt-1 text-xs">
-                    {[
-                      { id: 'Breakfast', label: 'Free Breakfast' },
-                      { id: 'Pool', label: 'Swimming Pool' },
-                      { id: 'WiFi', label: 'High-Speed WiFi' },
-                      { id: 'Spa', label: 'Luxury Spa' },
-                      { id: 'Bar', label: 'Bar & Lounge' },
-                      { id: 'Parking', label: 'Free Parking' }
-                    ].map(am => (
-                      <label key={am.id} className="flex items-center gap-2 cursor-pointer text-slate-600 hover:text-slate-900 py-0.5">
-                        <input
-                          type="checkbox"
-                          checked={selectedAmenities.includes(am.id)}
-                          onChange={() => handleAmenityToggle(am.id)}
-                          className="accent-[#0ea5e9] rounded cursor-pointer"
-                        />
-                        <span>{am.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-            </div>
-          </aside>
-
-          {/* ======================= RIGHT COLUMN: RESULTS ======================= */}
-          <main className="flex-1 w-full min-w-0 space-y-4">
-            
-            {/* Mobile Filter & Search Bar (Visible only on < lg mobile devices) */}
-            <div className="lg:hidden w-full space-y-2.5">
-              <div className="flex items-center gap-2">
-                {/* Mobile Filter Trigger Button */}
-                <button
-                  type="button"
-                  onClick={() => setIsMobileFiltersOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs shadow-xs hover:bg-black active:scale-95 transition-all cursor-pointer shrink-0"
-                >
-                  <i className="fa-solid fa-sliders text-xs text-sky-400" />
-                  <span>Filters</span>
-                  {((selectedPriceTier !== 'all' ? 1 : 0) + (minRating > 0 ? 1 : 0) + selectedLocalities.length + selectedAmenities.length + (selectedCategory !== 'All' ? 1 : 0) + (aiFilterQuery.trim() ? 1 : 0) + (activeDealFilter !== 'all' ? 1 : 0)) > 0 && (
-                    <span className="w-4 h-4 rounded-full bg-sky-500 text-white text-[10px] font-black flex items-center justify-center leading-none">
-                      {(selectedPriceTier !== 'all' ? 1 : 0) + (minRating > 0 ? 1 : 0) + selectedLocalities.length + selectedAmenities.length + (selectedCategory !== 'All' ? 1 : 0) + (aiFilterQuery.trim() ? 1 : 0) + (activeDealFilter !== 'all' ? 1 : 0)}
-                    </span>
-                  )}
-                </button>
-
-                {/* Mobile Search Input */}
-                <div className="flex-1 min-w-0 bg-white rounded-xl border border-slate-200 px-3 py-2 flex items-center gap-2 shadow-2xs">
-                  <i className="fa-solid fa-magnifying-glass text-slate-400 text-xs shrink-0" />
-                  <input
-                    type="text"
-                    value={aiFilterQuery}
-                    onChange={(e) => setAiFilterQuery(e.target.value)}
-                    placeholder="Search hotel name or area..."
-                    className="w-full bg-transparent text-xs text-slate-800 placeholder:text-slate-400 outline-none font-medium"
-                  />
-                  {aiFilterQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setAiFilterQuery('')}
-                      className="text-slate-400 hover:text-slate-700 text-xs cursor-pointer"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Mobile Quick Horizontal Scrollable Filter Chips */}
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-xs">
-                {[
-                  { id: 'all_prices', label: 'All Stays', active: selectedPriceTier === 'all', onClick: () => setSelectedPriceTier('all') },
-                  { id: 'under2k', label: 'Under ₹2K', active: selectedPriceTier === 'under2k', onClick: () => setSelectedPriceTier(selectedPriceTier === 'under2k' ? 'all' : 'under2k') },
-                  { id: '2k-4k', label: '₹2K - ₹4K', active: selectedPriceTier === '2k-4k', onClick: () => setSelectedPriceTier(selectedPriceTier === '2k-4k' ? 'all' : '2k-4k') },
-                  { id: 'rating_4', label: '★ 4.0+', active: minRating === 4.0, onClick: () => setMinRating(minRating === 4.0 ? 0 : 4.0) },
-                  { id: 'breakfast', label: 'Free Breakfast', active: selectedAmenities.includes('Breakfast'), onClick: () => handleAmenityToggle('Breakfast') },
-                  { id: 'pool', label: 'Swimming Pool', active: selectedAmenities.includes('Swimming Pool'), onClick: () => handleAmenityToggle('Swimming Pool') },
-                  { id: 'wifi', label: 'Free WiFi', active: selectedAmenities.includes('WiFi'), onClick: () => handleAmenityToggle('WiFi') },
-                ].map(chip => (
-                  <button
-                    key={chip.id}
-                    type="button"
-                    onClick={chip.onClick}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer border ${
-                      chip.active
-                        ? 'bg-sky-500 text-white border-sky-500 shadow-2xs'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    {chip.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Top 4 Promotional Deal Cards - Clean Luxury Theme with Live Counts & Active States */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              
-              {/* Card 1: Flash Deals */}
-              <div 
-                onClick={() => {
-                  const next = activeDealFilter === 'flash' ? 'all' : 'flash';
-                  setActiveDealFilter(next);
-                  showToast(next === 'flash' ? `Filtered ${dealCardStats.flash} Flash Deals` : 'Cleared Flash Deals filter');
-                }}
-                className={`group rounded-2xl p-3.5 border cursor-pointer hover:shadow-md transition-all flex flex-col justify-between min-h-[102px] ${
-                  activeDealFilter === 'flash' 
-                    ? 'bg-black text-white border-black shadow-md ring-2 ring-black' 
-                    : 'bg-white border-slate-200/90 hover:border-black shadow-2xs'
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-1 mb-1">
-                    <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider inline-flex items-center gap-1 ${
-                      activeDealFilter === 'flash' ? 'bg-white/20 text-white' : 'bg-sky-50 text-[#003b95] border border-sky-100'
-                    }`}>
-                      <i className="fa-regular fa-clock text-[9px]" />
-                      <span>Flash Deals</span>
-                    </span>
-                    <span className={`text-[10px] font-extrabold ${activeDealFilter === 'flash' ? 'text-amber-300' : 'text-slate-500'}`}>
-                      {dealCardStats.flash} Live
-                    </span>
-                  </div>
-                  <div className={`text-[10px] font-medium leading-none mt-1 ${activeDealFilter === 'flash' ? 'text-slate-300' : 'text-slate-500'}`}>
-                    Ends in
-                  </div>
-                  <div className={`font-black text-xs sm:text-sm font-mono mt-0.5 tracking-wider ${activeDealFilter === 'flash' ? 'text-white' : 'text-slate-900'}`}>
-                    {String(timeLeft.hours).padStart(2, '0')}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
-                  </div>
-                </div>
-                <div className="flex items-center justify-between pt-1">
-                  <span className={`text-[10px] font-bold ${activeDealFilter === 'flash' ? 'text-white' : 'text-slate-500'}`}>
-                    {activeDealFilter === 'flash' ? '✓ Applied' : 'Tap to apply'}
-                  </span>
-                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] transition-all ${
-                    activeDealFilter === 'flash' ? 'bg-white text-black' : 'bg-slate-100 text-slate-700 group-hover:bg-black group-hover:text-white'
-                  }`}>
-                    <i className={activeDealFilter === 'flash' ? 'fa-solid fa-check text-[9px]' : 'fa-solid fa-arrow-right text-[9px]'} />
-                  </span>
-                </div>
-              </div>
-
-              {/* Card 2: Budget Brands */}
-              <div 
-                onClick={() => {
-                  const next = activeDealFilter === 'budget' ? 'all' : 'budget';
-                  setActiveDealFilter(next);
-                  showToast(next === 'budget' ? `Showing ${dealCardStats.budget} Budget Brands under ₹3,000` : 'Cleared Budget filter');
-                }}
-                className={`group rounded-2xl p-3.5 border cursor-pointer hover:shadow-md transition-all flex flex-col justify-between min-h-[102px] ${
-                  activeDealFilter === 'budget' 
-                    ? 'bg-black text-white border-black shadow-md ring-2 ring-black' 
-                    : 'bg-white border-slate-200/90 hover:border-black shadow-2xs'
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-1 mb-1">
-                    <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider ${
-                      activeDealFilter === 'budget' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700 border border-slate-200'
-                    }`}>
-                      Verified Stays
-                    </span>
-                    <span className={`text-[10px] font-extrabold ${activeDealFilter === 'budget' ? 'text-slate-200' : 'text-slate-500'}`}>
-                      {dealCardStats.budget} Stays
-                    </span>
-                  </div>
-                  <div className={`text-sm font-black tracking-tight leading-tight ${activeDealFilter === 'budget' ? 'text-white' : 'text-slate-900'}`}>
-                    Budget Brands
-                  </div>
-                  <div className={`text-[11px] font-medium mt-0.5 ${activeDealFilter === 'budget' ? 'text-slate-300' : 'text-slate-500'}`}>
-                    Under ₹3,000
-                  </div>
-                </div>
-                <div className="flex items-center justify-between pt-1">
-                  <span className={`text-[10px] font-bold ${activeDealFilter === 'budget' ? 'text-white' : 'text-slate-500'}`}>
-                    {activeDealFilter === 'budget' ? '✓ Applied' : 'Tap to apply'}
-                  </span>
-                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] transition-all ${
-                    activeDealFilter === 'budget' ? 'bg-white text-black' : 'bg-slate-100 text-slate-700 group-hover:bg-black group-hover:text-white'
-                  }`}>
-                    <i className={activeDealFilter === 'budget' ? 'fa-solid fa-check text-[9px]' : 'fa-solid fa-arrow-right text-[9px]'} />
-                  </span>
-                </div>
-              </div>
-
-              {/* Card 3: Under ₹1,999 / Value Stays */}
-              <div 
-                onClick={() => {
-                  const next = activeDealFilter === 'under999' ? 'all' : 'under999';
-                  setActiveDealFilter(next);
-                  showToast(next === 'under999' ? `Showing ${dealCardStats.under999} stays under ₹1,999` : 'Cleared pocket-friendly filter');
-                }}
-                className={`group rounded-2xl p-3.5 border cursor-pointer hover:shadow-md transition-all flex flex-col justify-between min-h-[102px] ${
-                  activeDealFilter === 'under999' 
-                    ? 'bg-black text-white border-black shadow-md ring-2 ring-black' 
-                    : 'bg-white border-slate-200/90 hover:border-black shadow-2xs'
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-1 mb-1">
-                    <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider ${
-                      activeDealFilter === 'under999' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700 border border-slate-200'
-                    }`}>
-                      Super Value
-                    </span>
-                    <span className={`text-[10px] font-extrabold ${activeDealFilter === 'under999' ? 'text-slate-200' : 'text-slate-500'}`}>
-                      {dealCardStats.under999} Stays
-                    </span>
-                  </div>
-                  <div className={`text-sm sm:text-base font-black tracking-tight leading-tight ${activeDealFilter === 'under999' ? 'text-white' : 'text-slate-900'}`}>
-                    Under ₹1,999
-                  </div>
-                  <div className={`text-[11px] font-medium mt-0.5 ${activeDealFilter === 'under999' ? 'text-slate-300' : 'text-slate-500'}`}>
-                    Pocket Friendly
-                  </div>
-                </div>
-                <div className="flex items-center justify-between pt-1">
-                  <span className={`text-[10px] font-bold ${activeDealFilter === 'under999' ? 'text-white' : 'text-slate-500'}`}>
-                    {activeDealFilter === 'under999' ? '✓ Applied' : 'Tap to apply'}
-                  </span>
-                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] transition-all ${
-                    activeDealFilter === 'under999' ? 'bg-white text-black' : 'bg-slate-100 text-slate-700 group-hover:bg-black group-hover:text-white'
-                  }`}>
-                    <i className={activeDealFilter === 'under999' ? 'fa-solid fa-check text-[9px]' : 'fa-solid fa-arrow-right text-[9px]'} />
-                  </span>
-                </div>
-              </div>
-
-              {/* Card 4: Exclusive HF Deals */}
-              <div 
-                onClick={() => {
-                  const next = activeDealFilter === 'exclusive' ? 'all' : 'exclusive';
-                  setActiveDealFilter(next);
-                  showToast(next === 'exclusive' ? `Showing ${dealCardStats.exclusive} Luxury & Heritage Stays` : 'Cleared Royal Deals filter');
-                }}
-                className={`group rounded-2xl p-3.5 border cursor-pointer hover:shadow-md transition-all flex flex-col justify-between min-h-[102px] ${
-                  activeDealFilter === 'exclusive' 
-                    ? 'bg-black text-white border-black shadow-md ring-2 ring-black' 
-                    : 'bg-white border-slate-200/90 hover:border-black shadow-2xs'
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-1 mb-1">
-                    <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${
-                      activeDealFilter === 'exclusive' ? 'bg-white/20 text-white' : 'bg-amber-50 text-amber-900 border border-amber-200/80'
-                    }`}>
-                      ✦ Exclusive
-                    </span>
-                    <span className={`text-[10px] font-extrabold ${activeDealFilter === 'exclusive' ? 'text-amber-200' : 'text-slate-500'}`}>
-                      {dealCardStats.exclusive} Stays
-                    </span>
-                  </div>
-                  <div className={`text-sm font-black tracking-tight leading-tight ${activeDealFilter === 'exclusive' ? 'text-white' : 'text-slate-900'}`}>
-                    HF Royal Deals
-                  </div>
-                  <div className={`text-[11px] font-medium mt-0.5 ${activeDealFilter === 'exclusive' ? 'text-slate-300' : 'text-slate-500'}`}>
-                    Luxury &amp; Heritage
-                  </div>
-                </div>
-                <div className="flex items-center justify-between pt-1">
-                  <span className={`text-[10px] font-bold ${activeDealFilter === 'exclusive' ? 'text-white' : 'text-slate-500'}`}>
-                    {activeDealFilter === 'exclusive' ? '✓ Applied' : 'Tap to apply'}
-                  </span>
-                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] transition-all ${
-                    activeDealFilter === 'exclusive' ? 'bg-white text-black' : 'bg-slate-100 text-slate-700 group-hover:bg-black group-hover:text-white'
-                  }`}>
-                    <i className={activeDealFilter === 'exclusive' ? 'fa-solid fa-check text-[9px]' : 'fa-solid fa-arrow-right text-[9px]'} />
-                  </span>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Active Filters Summary Bar (Easy for customers to understand & 1-click remove) */}
-            {(activeDealFilter !== 'all' || selectedCategory !== 'All' || Boolean(aiFilterQuery.trim()) || selectedPriceTier !== 'all' || minRating > 0 || selectedLocalities.length > 0 || selectedAmenities.length > 0) && (
-              <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-2.5 shadow-2xs">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5 mr-1">
-                    <i className="fa-solid fa-sliders text-[#0ea5e9] text-xs" />
-                    <span>Applied Filters:</span>
-                  </span>
-
-                  {/* Deal filter chip */}
-                  {activeDealFilter !== 'all' && (
-                    <span className="inline-flex items-center gap-1.5 bg-black text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-2xs">
-                      <span>
-                        {activeDealFilter === 'flash' && `⚡ Flash Deals (${dealCardStats.flash})`}
-                        {activeDealFilter === 'budget' && `🏷️ Under ₹3,000 (${dealCardStats.budget})`}
-                        {activeDealFilter === 'under999' && `💰 Under ₹1,999 (${dealCardStats.under999})`}
-                        {activeDealFilter === 'exclusive' && `👑 HF Royal (${dealCardStats.exclusive})`}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setActiveDealFilter('all')}
-                        className="hover:text-rose-300 ml-0.5 cursor-pointer font-black"
-                        aria-label="Remove deal filter"
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  )}
-
-                  {/* Category chip */}
-                  {selectedCategory !== 'All' && (
-                    <span className="inline-flex items-center gap-1.5 bg-white text-slate-800 border border-slate-200 text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-2xs">
-                      <span>🏨 {selectedCategory}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedCategory('All');
-                          if (setContextCategory) setContextCategory('All');
-                        }}
-                        className="hover:text-rose-500 ml-0.5 cursor-pointer font-black"
-                        aria-label="Remove category filter"
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  )}
-
-                  {/* Keyword query chip */}
-                  {aiFilterQuery.trim() && (
-                    <span className="inline-flex items-center gap-1.5 bg-white text-slate-800 border border-slate-200 text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-2xs">
-                      <span>🔍 "{aiFilterQuery}"</span>
-                      <button
-                        type="button"
-                        onClick={() => setAiFilterQuery('')}
-                        className="hover:text-rose-500 ml-0.5 cursor-pointer font-black"
-                        aria-label="Clear search keyword"
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  )}
-
-                  {/* Price tier chip */}
-                  {selectedPriceTier !== 'all' && (
-                    <span className="inline-flex items-center gap-1.5 bg-white text-slate-800 border border-slate-200 text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-2xs">
-                      <span>
-                        💵 {selectedPriceTier === 'under2k' ? 'Under ₹2,000' : selectedPriceTier === '2k-4k' ? '₹2,000 - ₹4,000' : selectedPriceTier === '4k-8k' ? '₹4,000 - ₹8,000' : '₹8,000+'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedPriceTier('all')}
-                        className="hover:text-rose-500 ml-0.5 cursor-pointer font-black"
-                        aria-label="Remove price filter"
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  )}
-
-                  {/* Rating chip */}
-                  {minRating > 0 && (
-                    <span className="inline-flex items-center gap-1.5 bg-white text-slate-800 border border-slate-200 text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-2xs">
-                      <span>★ {minRating}+ Rating</span>
-                      <button
-                        type="button"
-                        onClick={() => setMinRating(0)}
-                        className="hover:text-rose-500 ml-0.5 cursor-pointer font-black"
-                        aria-label="Remove rating filter"
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  )}
-
-                  {/* Localities chips */}
-                  {selectedLocalities.map(loc => (
-                    <span key={loc} className="inline-flex items-center gap-1.5 bg-white text-slate-800 border border-slate-200 text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-2xs">
-                      <span>📍 {loc}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleLocalityToggle(loc)}
-                        className="hover:text-rose-500 ml-0.5 cursor-pointer font-black"
-                        aria-label={`Remove ${loc} filter`}
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  ))}
-
-                  {/* Amenities chips */}
-                  {selectedAmenities.map(am => (
-                    <span key={am} className="inline-flex items-center gap-1.5 bg-white text-slate-800 border border-slate-200 text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-2xs">
-                      <span>✨ {am}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleAmenityToggle(am)}
-                        className="hover:text-rose-500 ml-0.5 cursor-pointer font-black"
-                        aria-label={`Remove ${am} filter`}
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  ))}
-                </div>
-
-                {/* Reset all button */}
-                <button
-                  type="button"
-                  onClick={handleClearAllFilters}
-                  className="text-xs font-bold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 px-3 py-1 rounded-lg transition-colors cursor-pointer shrink-0 inline-flex items-center gap-1"
-                >
-                  <i className="fa-solid fa-rotate-left text-[10px]" />
-                  <span>Clear all</span>
+                  <i className="fa-solid fa-list-ul text-[11px]" />
+                  <span>List</span>
                 </button>
               </div>
-            )}
 
-            {/* Results Count & Sort By Bar */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
-              <div className="text-sm font-extrabold text-slate-800">
-                <span>{sortedHotels.length} properties found</span>
-              </div>
-
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-slate-500 font-semibold">Sort by:</span>
-                <div className="flex items-center gap-1">
+              {/* Sort By Pills */}
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className="text-slate-500 font-semibold hidden sm:inline">Sort:</span>
+                <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-md">
                   {[
-                    { id: 'featured', label: 'Popularity ↓' },
-                    { id: 'rating', label: 'Ratings' },
-                    { id: 'price_low', label: 'Price' }
+                    { id: 'featured', label: 'Popular' },
+                    { id: 'rating', label: 'Rating' },
+                    { id: 'price_low', label: 'Price ↑' },
+                    { id: 'price_high', label: 'Price ↓' }
                   ].map(s => (
                     <button
                       key={s.id}
                       type="button"
                       onClick={() => setFilterSort(s.id)}
-                      className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-colors cursor-pointer ${
+                      className={`px-2.5 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
                         filterSort === s.id
-                          ? 'bg-slate-900 text-white'
-                          : 'text-slate-600 hover:bg-slate-100'
+                          ? 'bg-white text-slate-950 shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
                       {s.label}
@@ -1302,57 +802,184 @@ export default function SearchScreen() {
                   ))}
                 </div>
               </div>
-            </div>
 
-            {/* Location Banner: "Hotels near you" */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-              <div>
-                <h4 className="text-sm font-extrabold text-slate-900">
-                  Hotels in {destinationInput || 'your selected area'}
-                </h4>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  See verified stays and available boutique suites in this destination.
-                </p>
-              </div>
+              {/* Filter Trigger Button with Icon (Core User Request) */}
               <button
                 type="button"
-                onClick={() => {
-                  setDestinationInput('Near me');
-                  showToast('Detecting precise location for nearby stays...');
-                }}
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold cursor-pointer transition-colors shadow-2xs shrink-0"
+                onClick={() => setIsMobileFiltersOpen(true)}
+                className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-md border text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95 ${
+                  activeFilterCount > 0
+                    ? 'bg-slate-950 text-white border-slate-950 shadow-xs'
+                    : 'bg-white text-slate-800 border-slate-300 hover:border-slate-800 hover:bg-slate-50'
+                }`}
               >
-                <i className="fa-solid fa-location-crosshairs text-[#0ea5e9]"></i>
-                <span>Use precise location</span>
+                <i className={`fa-solid fa-sliders text-xs ${activeFilterCount > 0 ? 'text-sky-400' : 'text-slate-700'}`} />
+                <span>Filters</span>
+                {activeFilterCount > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-sky-500 text-white text-[10px] font-black flex items-center justify-center leading-none">
+                    {activeFilterCount}
+                  </span>
+                )}
               </button>
             </div>
+          </div>
 
-            {/* Section Heading */}
-            <div className="pt-2">
-              <h2 className="text-base font-extrabold text-slate-900 tracking-tight">
-                Showing properties in {destinationInput || 'all destinations'}
-              </h2>
+          {/* Active Filters Summary Strip (Compact, shown only when any filter is active) */}
+          {activeFilterCount > 0 && (
+            <div className="bg-slate-50 border border-slate-200/90 rounded-md p-2.5 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-bold text-slate-700 flex items-center gap-1 mr-1">
+                  <i className="fa-solid fa-sliders text-sky-600 text-xs" />
+                  <span>Applied:</span>
+                </span>
+
+                {/* Deal filter chip */}
+                {activeDealFilter !== 'all' && (
+                  <span className="inline-flex items-center gap-1.5 bg-black text-white text-[11px] font-bold px-2 py-0.5 rounded shadow-2xs">
+                    <span>
+                      {activeDealFilter === 'flash' && `⚡ Flash Deals (${dealCardStats.flash})`}
+                      {activeDealFilter === 'budget' && `🏷️ Under ₹3,000 (${dealCardStats.budget})`}
+                      {activeDealFilter === 'under999' && `💰 Under ₹1,999 (${dealCardStats.under999})`}
+                      {activeDealFilter === 'exclusive' && `👑 HF Royal (${dealCardStats.exclusive})`}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveDealFilter('all')}
+                      className="hover:text-rose-300 ml-0.5 cursor-pointer font-black"
+                      aria-label="Remove deal filter"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                )}
+
+                {/* Category chip */}
+                {selectedCategory !== 'All' && (
+                  <span className="inline-flex items-center gap-1.5 bg-white text-slate-800 border border-slate-200 text-[11px] font-bold px-2 py-0.5 rounded shadow-2xs">
+                    <span>🏨 {selectedCategory}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategory('All');
+                        if (setContextCategory) setContextCategory('All');
+                      }}
+                      className="hover:text-rose-500 ml-0.5 cursor-pointer font-black"
+                      aria-label="Remove category filter"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                )}
+
+                {/* Keyword query chip */}
+                {aiFilterQuery && aiFilterQuery.trim() && (
+                  <span className="inline-flex items-center gap-1.5 bg-white text-slate-800 border border-slate-200 text-[11px] font-bold px-2 py-0.5 rounded shadow-2xs">
+                    <span>🔍 "{aiFilterQuery}"</span>
+                    <button
+                      type="button"
+                      onClick={() => setAiFilterQuery('')}
+                      className="hover:text-rose-500 ml-0.5 cursor-pointer font-black"
+                      aria-label="Clear search keyword"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                )}
+
+                {/* Price tier chip */}
+                {selectedPriceTier !== 'all' && (
+                  <span className="inline-flex items-center gap-1.5 bg-white text-slate-800 border border-slate-200 text-[11px] font-bold px-2 py-0.5 rounded shadow-2xs">
+                    <span>
+                      💵 {selectedPriceTier === 'under2k' ? 'Under ₹2,000' : selectedPriceTier === '2k-4k' ? '₹2,000 - ₹4,000' : selectedPriceTier === '4k-8k' ? '₹4,000 - ₹8,000' : '₹8,000+'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPriceTier('all')}
+                      className="hover:text-rose-500 ml-0.5 cursor-pointer font-black"
+                      aria-label="Remove price filter"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                )}
+
+                {/* Rating chip */}
+                {minRating > 0 && (
+                  <span className="inline-flex items-center gap-1.5 bg-white text-slate-800 border border-slate-200 text-[11px] font-bold px-2 py-0.5 rounded shadow-2xs">
+                    <span>★ {minRating}+ Rating</span>
+                    <button
+                      type="button"
+                      onClick={() => setMinRating(0)}
+                      className="hover:text-rose-500 ml-0.5 cursor-pointer font-black"
+                      aria-label="Remove rating filter"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                )}
+
+                {/* Localities chips */}
+                {selectedLocalities.map(loc => (
+                  <span key={loc} className="inline-flex items-center gap-1.5 bg-white text-slate-800 border border-slate-200 text-[11px] font-bold px-2 py-0.5 rounded shadow-2xs">
+                    <span>📍 {loc}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleLocalityToggle(loc)}
+                      className="hover:text-rose-500 ml-0.5 cursor-pointer font-black"
+                      aria-label={`Remove ${loc} filter`}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+
+                {/* Amenities chips */}
+                {selectedAmenities.map(am => (
+                  <span key={am} className="inline-flex items-center gap-1.5 bg-white text-slate-800 border border-slate-200 text-[11px] font-bold px-2 py-0.5 rounded shadow-2xs">
+                    <span>✨ {am}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleAmenityToggle(am)}
+                      className="hover:text-rose-500 ml-0.5 cursor-pointer font-black"
+                      aria-label={`Remove ${am} filter`}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+
+              {/* Clear all button */}
+              <button
+                type="button"
+                onClick={handleClearAllFilters}
+                className="text-xs font-bold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0 inline-flex items-center gap-1"
+              >
+                <i className="fa-solid fa-rotate-left text-[10px]" />
+                <span>Clear all</span>
+              </button>
             </div>
+          )}
 
-            {/* Hotel Cards List (Horizontal Layout Matching Reference Image) */}
-            <div className="space-y-4">
-              {sortedHotels.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center my-6 flex flex-col items-center">
-                  <i className="fa-solid fa-hotel text-4xl text-slate-300 mb-3"></i>
-                  <h3 className="text-base font-bold text-slate-800 mb-1">No hotels match your filters</h3>
-                  <p className="text-xs text-slate-500 max-w-sm mb-4">
-                    Try relaxing your price, rating, or location filters to see more available properties.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleClearAllFilters}
-                    className="px-5 py-2 rounded-xl bg-[#0ea5e9] text-white text-xs font-bold hover:bg-[#0284c7] transition-colors cursor-pointer active:scale-[0.98]"
-                  >
-                    Reset All Filters
-                  </button>
-                </div>
-              ) : (
-                sortedHotels.map(hotel => {
+            {/* Hotel Cards Display: Responsive Grid (Big Hotel Brand Style) or Compact List */}
+            {sortedHotels.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center my-6 flex flex-col items-center">
+                <i className="fa-solid fa-hotel text-4xl text-slate-300 mb-3"></i>
+                <h3 className="text-base font-bold text-slate-800 mb-1">No hotels match your filters</h3>
+                <p className="text-xs text-slate-500 max-w-sm mb-4">
+                  Try relaxing your price, rating, or location filters to see more available properties.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleClearAllFilters}
+                  className="px-5 py-2 rounded-xl bg-[#0ea5e9] text-white text-xs font-bold hover:bg-[#0284c7] transition-colors cursor-pointer active:scale-[0.98]"
+                >
+                  Reset All Filters
+                </button>
+              </div>
+            ) : (
+              <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6" : "max-w-4xl mx-auto space-y-4"}>
+                {sortedHotels.map(hotel => {
                   const hotelId = hotel.id || hotel._id;
                   const isFavorite = favorites.includes(hotelId);
                   const price = Number(hotel.startingPrice || 2950);
@@ -1364,146 +991,251 @@ export default function SearchScreen() {
                   const taxAmount = Math.round(price * 0.12);
                   const rating = Number(hotel.rating || 4.3);
                   const reviewsCount = Number(hotel.reviewsCount || 141);
-                  const imagesList = hotel.images && hotel.images.length > 0 ? hotel.images : [hotel.image || '/images/hotel-leaf-goa.png'];
-                  const activeImgIdx = photoIndices[hotelId] || 0;
-                  const currentImage = imagesList[activeImgIdx % imagesList.length];
 
+                  if (viewMode === 'grid') {
+                    return (
+                      <article
+                        key={hotelId}
+                        onClick={() => handleHotelClick(hotelId, hotel)}
+                        className="bg-white rounded-md border border-slate-200/90 overflow-hidden shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col group cursor-pointer h-full hover:border-slate-300"
+                      >
+                        {/* 1. Carousel Header */}
+                        <div className="w-full h-52 sm:h-56 relative overflow-hidden bg-slate-100 shrink-0">
+                          <HotelCardImageCarousel
+                            hotel={hotel}
+                            hotelName={hotel.name}
+                            aspectRatio="h-52 sm:h-56"
+                            overlayTopLeft={isFlashEligible ? (
+                              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/80 backdrop-blur-xs text-white text-[10px] font-extrabold uppercase tracking-wider shadow-xs border border-white/10">
+                                <i className="fa-solid fa-bolt text-amber-400 text-[9px]" />
+                                <span>Flash Deal</span>
+                              </div>
+                            ) : (
+                              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/95 backdrop-blur-xs text-slate-900 text-[10px] font-black shadow-xs border border-slate-200/80">
+                                <span className="text-amber-500 text-[10px]">★</span>
+                                <span>{rating.toFixed(1)}</span>
+                                <span className="text-slate-400 font-normal">({reviewsCount})</span>
+                              </div>
+                            )}
+                            overlayTopRight={(
+                              <button
+                                type="button"
+                                aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleFavorite(hotelId);
+                                }}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center shadow-xs backdrop-blur-xs cursor-pointer transition-all ${
+                                  isFavorite ? 'bg-black text-white' : 'bg-white/85 text-slate-700 hover:text-black hover:bg-white'
+                                }`}
+                              >
+                                <i className={`fa-heart text-xs ${isFavorite ? 'fa-solid text-rose-500' : 'fa-regular'}`} />
+                              </button>
+                            )}
+                          />
+                        </div>
+
+                        {/* 2. Hotel Details */}
+                        <div className="p-4 flex-1 flex flex-col justify-between">
+                          <div>
+                            {/* City / Locality & Rating */}
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate flex items-center gap-1">
+                                <i className="fa-solid fa-location-dot text-[10px] text-slate-400" />
+                                <span>{hotel.city || 'Rajasthan'}</span>
+                              </span>
+                              {isFlashEligible && (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-black text-slate-900">
+                                  <span className="text-amber-500 text-[10px]">★</span>
+                                  <span>{rating.toFixed(1)}</span>
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Hotel Title */}
+                            <h3 className="text-base font-bold text-slate-900 group-hover:text-sky-600 transition-colors line-clamp-1 leading-snug">
+                              {hotel.name}
+                            </h3>
+
+                            {/* Distance & Locality */}
+                            <p className="text-xs text-slate-500 truncate mt-0.5">
+                              {hotel.locality || hotel.address || `${hotel.city}, Rajasthan`} • 400m to center
+                            </p>
+
+                            {/* 5+ Adults Capacity Pill & Smart Combo Notification */}
+                            {Number(adults) >= 4 && (
+                              <div className="mt-2">
+                                {Array.isArray(hotel.rooms) && hotel.rooms.some(r => r.isCombo || (r.capacityAdults && r.capacityAdults >= Number(adults))) ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded">
+                                    <i className="fa-solid fa-people-group text-[9px]" />
+                                    <span>Fits {adults} Adults in 1 Booking</span>
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+                                    <i className="fa-solid fa-door-open text-[9px] text-amber-600" />
+                                    <span>{Math.ceil(Number(adults) / 2)} rooms needed</span>
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Dynamic Verified Amenity & Policy Tags */}
+                            <div className="flex flex-wrap items-center gap-1 mt-2.5 pt-2 border-t border-slate-100">
+                              {hotel.cancellationPolicy?.badgeText && (
+                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+                                  hotel.cancellationPolicy?.refundable !== false
+                                    ? 'bg-sky-50 text-sky-800 border border-sky-200/60'
+                                    : 'bg-zinc-100 text-zinc-700'
+                                }`}>
+                                  {hotel.cancellationPolicy.badgeText}
+                                </span>
+                              )}
+                              {Array.isArray(hotel.amenities) && hotel.amenities.slice(0, 3).map((am, idx) => (
+                                <span key={idx} className="bg-slate-100 text-slate-700 text-[10px] font-medium px-2 py-0.5 rounded truncate max-w-[120px]">
+                                  {am}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Pricing and Action Footer */}
+                          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                            <div>
+                              <div className="flex items-center gap-1 text-[11px] font-bold text-sky-600 leading-none mb-0.5">
+                                <span>{discountPercent}% off</span>
+                                <span className="text-slate-400 font-normal line-through text-[10px]">
+                                  ₹{originalPrice.toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                              <div className="text-xl font-black text-slate-900 leading-tight">
+                                ₹{price.toLocaleString('en-IN')}
+                                <span className="text-[10px] font-medium text-slate-500 ml-1">/ night</span>
+                              </div>
+                              <div className="text-[10px] text-slate-400 leading-none">
+                                +₹{taxAmount} taxes &amp; fees
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleHotelClick(hotelId, hotel);
+                              }}
+                              className="px-3.5 py-2 rounded-md bg-slate-900 hover:bg-black active:scale-95 text-white font-bold text-xs uppercase tracking-wider shadow-xs transition-all cursor-pointer whitespace-nowrap"
+                            >
+                              Select Room
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Flash Deal Bottom Bar */}
+                        {isFlashEligible && (
+                          <div className="w-full bg-amber-50/80 border-t border-amber-100 px-3 py-1.5 flex items-center justify-between text-[11px] shrink-0">
+                            <span className="inline-flex items-center gap-1 font-bold text-amber-900 text-[10px] uppercase tracking-wider">
+                              <i className="fa-solid fa-bolt text-amber-500 text-[9px]" /> Flash Deal
+                            </span>
+                            <span className="text-[10px] font-extrabold text-emerald-700">
+                              Save ₹{savingsAmount.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        )}
+                      </article>
+                    );
+                  }
+
+                  /* List View: Horizontal layout constrained to max-w-4xl so it is never awkwardly stretched */
                   return (
                     <article
                       key={hotelId}
                       onClick={() => handleHotelClick(hotelId, hotel)}
-                      className="w-full bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col group cursor-pointer"
+                      className="w-full bg-white rounded-md border border-slate-200/90 overflow-hidden shadow-2xs hover:shadow-md transition-all flex flex-col group cursor-pointer hover:border-slate-300"
                     >
-                      {/* Main Card Body (Horizontal Row: Image | Details | Price CTA) */}
-                      <div className="flex flex-col sm:flex-row items-stretch sm:h-[235px] md:h-[245px]">
-                        
-                        {/* 1. Left: Thumbnail & Carousel */}
-                        <div className="w-full sm:w-64 md:w-72 h-56 sm:h-full relative overflow-hidden bg-slate-100 shrink-0">
-                          <img
-                            src={currentImage}
-                            alt={hotel.name}
-                            loading="lazy"
-                            onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80'; }}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          />
-
-                          {/* Flash Deal Overlay Badge on Image */}
-                          {isFlashEligible && (
-                            <div className="absolute top-2.5 left-2.5 z-10 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-xs text-white text-[10px] font-extrabold uppercase tracking-wider shadow-xs border border-white/10">
-                              <i className="fa-solid fa-bolt text-amber-400 text-[9px]" />
-                              <span>Flash Deal</span>
-                            </div>
-                          )}
-
-                          {/* Prev / Next photo arrows on desktop hover */}
-                          {imagesList.length > 1 && (
-                            <>
+                      <div className="flex flex-col sm:flex-row items-stretch sm:h-[220px]">
+                        {/* 1. Left: Image Carousel */}
+                        <div className="w-full sm:w-64 md:w-72 h-52 sm:h-full relative overflow-hidden bg-slate-100 shrink-0">
+                          <HotelCardImageCarousel
+                            hotel={hotel}
+                            hotelName={hotel.name}
+                            aspectRatio="h-52 sm:h-full"
+                            overlayTopLeft={isFlashEligible ? (
+                              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-xs text-white text-[10px] font-extrabold uppercase tracking-wider shadow-xs border border-white/10">
+                                <i className="fa-solid fa-bolt text-amber-400 text-[9px]" />
+                                <span>Flash Deal</span>
+                              </div>
+                            ) : null}
+                            overlayTopRight={(
                               <button
                                 type="button"
-                                aria-label="Previous photo"
-                                onClick={(e) => handlePrevPhoto(e, hotelId, imagesList.length)}
-                                className="absolute left-2.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                              >
-                                <i className="fa-solid fa-chevron-left text-[10px]"></i>
-                              </button>
-                              <button
-                                type="button"
-                                aria-label="Next photo"
-                                onClick={(e) => handleNextPhoto(e, hotelId, imagesList.length)}
-                                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                              >
-                                <i className="fa-solid fa-chevron-right text-[10px]"></i>
-                              </button>
-                            </>
-                          )}
-
-                          {/* Carousel Pagination Dots */}
-                          <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-black/40 backdrop-blur-xs">
-                            {imagesList.slice(0, 4).map((_, idx) => (
-                              <span
-                                key={idx}
-                                className={`block rounded-full transition-all ${
-                                  idx === (activeImgIdx % 4) ? 'w-1.5 h-1.5 bg-white' : 'w-1 h-1 bg-white/50'
+                                aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleFavorite(hotelId);
+                                }}
+                                className={`sm:hidden w-7 h-7 rounded-full flex items-center justify-center shadow-xs backdrop-blur-xs cursor-pointer transition-all ${
+                                  isFavorite ? 'bg-black text-white' : 'bg-white/80 text-slate-700 hover:text-black'
                                 }`}
-                              />
-                            ))}
-                          </div>
-
-                          {/* Mobile Wishlist Button */}
-                          <button
-                            type="button"
-                            aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleFavorite(hotelId);
-                            }}
-                            className={`sm:hidden absolute top-2.5 right-2.5 z-10 w-7 h-7 rounded-full flex items-center justify-center shadow-xs backdrop-blur-xs cursor-pointer ${
-                              isFavorite ? 'bg-[#0ea5e9] text-white' : 'bg-white/80 text-slate-700 hover:text-[#0ea5e9]'
-                            }`}
-                          >
-                            <i className={`fa-heart text-xs ${isFavorite ? 'fa-solid' : 'fa-regular'}`}></i>
-                          </button>
+                              >
+                                <i className={`fa-heart text-xs ${isFavorite ? 'fa-solid text-rose-500' : 'fa-regular'}`} />
+                              </button>
+                            )}
+                          />
                         </div>
 
                         {/* 2. Middle: Details & Badges */}
-                        <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between min-w-0">
+                        <div className="p-4 sm:p-4.5 flex-1 flex flex-col justify-between min-w-0">
                           <div>
-                            {/* Rating Badge */}
-                            <div className="flex items-center gap-2 mb-1.5">
-                              <span className="inline-flex items-center gap-1 bg-[#0f8b4d] text-white text-[11px] font-bold px-1.5 py-0.5 rounded shadow-2xs">
-                                <span>★</span>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="inline-flex items-center gap-1 text-slate-900 text-xs font-black">
+                                <span className="text-amber-500 text-[11px]">★</span>
                                 <span>{rating.toFixed(1)}</span>
+                                <span className="text-slate-400 font-normal text-[11px]">({reviewsCount})</span>
                               </span>
                             </div>
 
-                            {/* Locality & Address */}
-                            <p className="text-xs font-semibold text-slate-700 truncate">
-                              {hotel.locality || hotel.address || `${hotel.city}, Rajasthan`}
-                            </p>
-
-                            {/* Hotel Title */}
-                            <h3 className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-[#0ea5e9] transition-colors mt-1 line-clamp-1 leading-snug">
+                            <h3 className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-sky-600 transition-colors line-clamp-1 leading-snug">
                               {hotel.name}
                             </h3>
 
-                            {/* Distance Indicator */}
-                            <p className="text-[11px] font-semibold text-slate-600 mt-1 flex items-center gap-1">
-                              <i className="fa-solid fa-location-dot text-[10px] text-slate-300" />
+                            <p className="text-xs font-semibold text-slate-600 truncate mt-0.5">
+                              {hotel.locality || hotel.address || `${hotel.city}, Rajasthan`}
+                            </p>
+
+                            <p className="text-[11px] font-medium text-slate-500 mt-1 flex items-center gap-1">
+                              <i className="fa-solid fa-location-dot text-[10px] text-slate-400" />
                               <span>410 m from city center</span>
                             </p>
                           </div>
 
-                          {/* 5+ Adults Capacity Pill & Smart Combo Notification */}
                           {Number(adults) >= 4 && (
-                            <div className="mb-2">
+                            <div className="my-1.5">
                               {Array.isArray(hotel.rooms) && hotel.rooms.some(r => r.isCombo || (r.capacityAdults && r.capacityAdults >= Number(adults))) ? (
-                                <span className="inline-flex items-center gap-1.5 bg-rose-50 text-[#d93025] border border-rose-200 text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-2xs">
-                                  <i className="fa-solid fa-people-group text-[10px]" />
-                                  <span>5-Beds Combo Available (Fits {adults} Adults in 1 Booking)</span>
+                                <span className="inline-flex items-center gap-1.5 bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold px-2 py-0.5 rounded">
+                                  <i className="fa-solid fa-people-group text-[9px]" />
+                                  <span>Fits {adults} Adults in 1 Booking</span>
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-semibold px-2.5 py-0.5 rounded-lg">
-                                  <i className="fa-solid fa-door-open text-[10px] text-amber-600" />
-                                  <span>{Math.ceil(Number(adults) / 2)} standard rooms needed for {adults} adults</span>
+                                <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-semibold px-2 py-0.5 rounded">
+                                  <i className="fa-solid fa-door-open text-[9px] text-amber-600" />
+                                  <span>{Math.ceil(Number(adults) / 2)} standard rooms needed</span>
                                 </span>
                               )}
                             </div>
                           )}
 
-                          {/* Tag Pills: Early check-in, Breakfast Available, Couple Friendly */}
-                          <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-slate-100">
-                            <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-semibold px-2 py-0.5 rounded">
-                              <i className="fa-regular fa-clock text-[9px]"></i>
-                              <span>Early check-in</span>
-                            </span>
-                            <span className="bg-slate-100 text-slate-700 text-[10px] font-medium px-2 py-0.5 rounded">
-                              Breakfast Available
-                            </span>
-                            <span className="bg-slate-100 text-slate-700 text-[10px] font-medium px-2 py-0.5 rounded">
-                              Couple Friendly
-                            </span>
-                            {hotel.amenities && hotel.amenities.slice(0, 1).map((am, idx) => (
-                              <span key={idx} className="hidden md:inline-block bg-slate-100 text-slate-700 text-[10px] font-medium px-2 py-0.5 rounded truncate max-w-[110px]">
+                          {/* Dynamic Verified Amenity & Policy Tags */}
+                          <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100">
+                            {hotel.cancellationPolicy?.badgeText && (
+                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+                                hotel.cancellationPolicy?.refundable !== false
+                                  ? 'bg-sky-50 text-sky-800 border border-sky-200/60'
+                                  : 'bg-zinc-100 text-zinc-700'
+                              }`}>
+                                {hotel.cancellationPolicy.badgeText}
+                              </span>
+                            )}
+                            {Array.isArray(hotel.amenities) && hotel.amenities.slice(0, 3).map((am, idx) => (
+                              <span key={idx} className="hidden md:inline-block bg-slate-100 text-slate-700 text-[10px] font-medium px-2 py-0.5 rounded truncate max-w-[120px]">
                                 {am}
                               </span>
                             ))}
@@ -1511,8 +1243,7 @@ export default function SearchScreen() {
                         </div>
 
                         {/* 3. Right: Pricing & CTA */}
-                        <div className="p-3.5 sm:p-5 sm:border-l border-slate-100 flex flex-row sm:flex-col justify-between items-center sm:items-end w-full sm:w-48 md:w-56 shrink-0 bg-slate-50/50 border-t sm:border-t-0 gap-3">
-                          {/* Desktop Wishlist Button */}
+                        <div className="p-4 sm:border-l border-slate-100 flex flex-row sm:flex-col justify-between items-center sm:items-end w-full sm:w-48 md:w-52 shrink-0 bg-slate-50/50 border-t sm:border-t-0 gap-3">
                           <div className="hidden sm:flex justify-end w-full">
                             <button
                               type="button"
@@ -1521,26 +1252,25 @@ export default function SearchScreen() {
                                 e.stopPropagation();
                                 toggleFavorite(hotelId);
                               }}
-                              className={`w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center transition-all cursor-pointer ${
-                                isFavorite ? 'bg-[#0ea5e9] text-white border-[#0ea5e9]' : 'bg-white text-slate-400 hover:text-[#0ea5e9] hover:border-[#0ea5e9] shadow-2xs'
+                              className={`w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center transition-all cursor-pointer ${
+                                isFavorite ? 'bg-black text-white border-black' : 'bg-white text-slate-400 hover:text-black hover:border-slate-400 shadow-2xs'
                               }`}
                             >
                               <i className={`fa-heart text-xs ${isFavorite ? 'fa-solid' : 'fa-regular'}`}></i>
                             </button>
                           </div>
 
-                          {/* Price Details Block */}
                           <div className="sm:w-full sm:text-right">
-                            <div className="flex items-center sm:justify-end gap-1.5 text-xs font-bold text-[#0ea5e9]">
+                            <div className="flex items-center sm:justify-end gap-1.5 text-xs font-bold text-sky-600">
                               <span>{discountPercent}% off</span>
-                              <span className="text-slate-500 font-semibold line-through decoration-rose-500/70 text-[11px]">
+                              <span className="text-slate-400 font-normal line-through text-[11px]">
                                 ₹{originalPrice.toLocaleString('en-IN')}
                               </span>
                             </div>
-                            <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight my-0.5">
+                            <div className="text-2xl font-black text-slate-900 tracking-tight leading-tight my-0.5">
                               ₹{price.toLocaleString('en-IN')}
                             </div>
-                            <div className="text-[11px] font-semibold text-slate-600">
+                            <div className="text-[11px] font-medium text-slate-500">
                               +₹{taxAmount} tax &amp; fees
                             </div>
                             <div className="text-[10px] text-slate-400">
@@ -1548,26 +1278,24 @@ export default function SearchScreen() {
                             </div>
                           </div>
 
-                          {/* Select Room Action CTA */}
-                          <div className="shrink-0 sm:w-full sm:mt-2">
+                          <div className="shrink-0 sm:w-full sm:mt-1">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleHotelClick(hotelId, hotel);
                               }}
-                              className="px-5 py-2.5 sm:w-full rounded-xl bg-[#0ea5e9] hover:bg-[#0284c7] active:scale-[0.98] text-white font-bold text-xs uppercase tracking-wider shadow-xs hover:shadow-md transition-all cursor-pointer text-center whitespace-nowrap"
+                              className="px-4 py-2 sm:w-full rounded-md bg-slate-900 hover:bg-black active:scale-95 text-white font-bold text-xs uppercase tracking-wider shadow-xs transition-all cursor-pointer text-center whitespace-nowrap"
                             >
-                              Select room
+                              Select Room
                             </button>
                           </div>
                         </div>
-
                       </div>
 
-                      {/* 4. Bottom Flash Deal Strip (Clean Luxury Theme matching Card) */}
+                      {/* Bottom Flash Deal Strip */}
                       {isFlashEligible && (
-                        <div className="w-full bg-amber-50/70 border-t border-amber-100/90 px-4 py-2 flex items-center justify-between text-xs shrink-0">
+                        <div className="w-full bg-amber-50/80 border-t border-amber-100/90 px-4 py-2 flex items-center justify-between text-xs shrink-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-900 font-extrabold text-[10px] uppercase tracking-wider">
                               <i className="fa-solid fa-bolt text-amber-600 text-[9px]" />
@@ -1585,45 +1313,52 @@ export default function SearchScreen() {
                       )}
                     </article>
                   );
-                })
-              )}
-            </div>
+                })}
+              </div>
+            )}
 
           </main>
-
         </div>
-      </div>
 
       {/* =========================================================================
-          MOBILE FILTERS BOTTOM SHEET / SLIDE-UP DRAWER (Mobile & Tablet)
+          UNIVERSAL FILTERS DRAWER / MODAL (Mobile Bottom Sheet + Desktop Slide-Over)
           ========================================================================= */}
       {isMobileFiltersOpen && (
         <div 
-          className="fixed inset-0 z-[1100] lg:hidden flex flex-col justify-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+          className="fixed inset-0 z-[1100] flex flex-col justify-end sm:justify-center sm:items-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
           onClick={() => setIsMobileFiltersOpen(false)}
         >
           <div
-            className="bg-white rounded-t-3xl max-h-[88vh] flex flex-col w-full overflow-hidden shadow-2xl animate-in slide-in-from-bottom duration-300"
+            className="bg-white rounded-t-2xl sm:rounded-t-none sm:rounded-l-2xl max-h-[90vh] sm:max-h-full h-auto sm:h-full flex flex-col w-full sm:w-[500px] overflow-hidden shadow-2xl animate-in slide-in-from-bottom sm:slide-in-from-right duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Sheet Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <i className="fa-solid fa-sliders text-sky-500 text-sm" />
-                <h3 className="text-base font-extrabold text-slate-900">Filters &amp; Preferences</h3>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white sticky top-0 z-10">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-md bg-sky-50 text-sky-600 flex items-center justify-center">
+                  <i className="fa-solid fa-sliders text-sm" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 leading-tight">Filters &amp; Preferences</h3>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    {activeFilterCount > 0 ? `${activeFilterCount} active filters applied` : 'Customize your hotel search'}
+                  </p>
+                </div>
               </div>
               <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleClearAllFilters}
-                  className="text-xs font-bold text-rose-500 hover:underline cursor-pointer"
-                >
-                  Clear all
-                </button>
+                {activeFilterCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearAllFilters}
+                    className="text-xs font-bold text-rose-600 hover:text-rose-700 hover:underline cursor-pointer"
+                  >
+                    Reset all
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setIsMobileFiltersOpen(false)}
-                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors cursor-pointer"
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors cursor-pointer text-sm font-bold"
                   aria-label="Close filters"
                 >
                   ✕
@@ -1632,10 +1367,67 @@ export default function SearchScreen() {
             </div>
 
             {/* Scrollable Filter Options */}
-            <div className="p-5 overflow-y-auto space-y-4 text-xs">
-              {/* 1. Price Per Night */}
-              <div className="border-b border-slate-100 pb-3">
-                <div className="font-extrabold text-slate-800 uppercase tracking-wider mb-2">Price per night</div>
+            <div className="p-6 overflow-y-auto space-y-6 text-xs divide-y divide-slate-100">
+              {/* 1. Keyword / Property Search */}
+              <div className="space-y-2">
+                <label className="font-extrabold text-slate-800 uppercase tracking-wider block text-[11px]">
+                  Property Name or Keyword
+                </label>
+                <div className="relative">
+                  <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                  <input
+                    type="text"
+                    value={aiFilterQuery}
+                    onChange={(e) => setAiFilterQuery(e.target.value)}
+                    placeholder="Search by hotel name or keyword..."
+                    className="w-full pl-8 pr-8 py-2.5 rounded-md border border-slate-200 bg-slate-50 focus:bg-white focus:border-sky-500 focus:outline-none text-xs font-medium text-slate-800 transition-all"
+                  />
+                  {aiFilterQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setAiFilterQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 2. Curated Deals & Offers */}
+              <div className="pt-5 space-y-2.5">
+                <div className="font-extrabold text-slate-800 uppercase tracking-wider text-[11px] flex items-center justify-between">
+                  <span>Special Offers &amp; Deals</span>
+                  <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">Verified</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'all', label: 'All Stays', icon: 'fa-hotel' },
+                    { id: 'flash', label: 'Flash Sale (30% Off)', icon: 'fa-bolt text-amber-500' },
+                    { id: 'budget', label: 'Budget Stays (< ₹3K)', icon: 'fa-tag text-emerald-500' },
+                    { id: 'value', label: 'Super Value (< ₹2K)', icon: 'fa-coins text-sky-500' },
+                    { id: 'luxury', label: 'HF Royal / Luxury', icon: 'fa-crown text-purple-500' }
+                  ].map(deal => (
+                    <button
+                      key={deal.id}
+                      type="button"
+                      onClick={() => setActiveDealFilter(deal.id)}
+                      className={`p-2.5 rounded-md border text-left font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                        activeDealFilter === deal.id
+                          ? 'border-sky-500 bg-sky-50 text-sky-700 shadow-2xs'
+                          : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <i className={`fa-solid ${deal.icon} text-xs shrink-0`}></i>
+                      <span className="truncate">{deal.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. Price Per Night */}
+              <div className="pt-5 space-y-2.5">
+                <div className="font-extrabold text-slate-800 uppercase tracking-wider text-[11px]">Price per night</div>
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { id: 'all', label: 'All Prices' },
@@ -1648,7 +1440,7 @@ export default function SearchScreen() {
                       key={tier.id}
                       type="button"
                       onClick={() => setSelectedPriceTier(tier.id)}
-                      className={`p-2.5 rounded-xl border text-left font-bold transition-all cursor-pointer ${
+                      className={`p-2.5 rounded-md border text-left font-bold transition-all cursor-pointer ${
                         selectedPriceTier === tier.id
                           ? 'border-sky-500 bg-sky-50 text-sky-700 shadow-2xs'
                           : 'border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -1660,10 +1452,10 @@ export default function SearchScreen() {
                 </div>
               </div>
 
-              {/* 2. Customer Rating */}
-              <div className="border-b border-slate-100 pb-3">
-                <div className="font-extrabold text-slate-800 uppercase tracking-wider mb-2">Customer Rating</div>
-                <div className="flex flex-wrap gap-2">
+              {/* 4. Customer Rating */}
+              <div className="pt-5 space-y-2.5">
+                <div className="font-extrabold text-slate-800 uppercase tracking-wider text-[11px]">Customer Rating</div>
+                <div className="grid grid-cols-2 gap-2">
                   {[
                     { val: 0, label: 'All Ratings' },
                     { val: 4.5, label: '★ 4.5+ Exceptional' },
@@ -1674,7 +1466,7 @@ export default function SearchScreen() {
                       key={r.val}
                       type="button"
                       onClick={() => setMinRating(r.val)}
-                      className={`px-3 py-2 rounded-xl border font-bold transition-all cursor-pointer ${
+                      className={`p-2.5 rounded-md border text-left font-bold transition-all cursor-pointer ${
                         minRating === r.val
                           ? 'border-sky-500 bg-sky-50 text-sky-700 shadow-2xs'
                           : 'border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -1686,17 +1478,38 @@ export default function SearchScreen() {
                 </div>
               </div>
 
-              {/* 3. Popular Localities */}
+              {/* 5. Property Type */}
+              <div className="pt-5 space-y-2.5">
+                <div className="font-extrabold text-slate-800 uppercase tracking-wider text-[11px]">Property Type</div>
+                <div className="flex flex-wrap gap-2">
+                  {availableCategories.map(cat => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-3 py-2 rounded-md border font-bold transition-all cursor-pointer ${
+                        selectedCategory === cat
+                          ? 'border-sky-500 bg-sky-50 text-sky-700 shadow-2xs'
+                          : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 6. Popular Localities */}
               {localityOptions.length > 0 && (
-                <div className="border-b border-slate-100 pb-3">
-                  <div className="font-extrabold text-slate-800 uppercase tracking-wider mb-2">Localities</div>
+                <div className="pt-5 space-y-2.5">
+                  <div className="font-extrabold text-slate-800 uppercase tracking-wider text-[11px]">Popular Localities</div>
                   <div className="flex flex-wrap gap-1.5">
                     {localityOptions.map(loc => (
                       <button
                         key={loc}
                         type="button"
                         onClick={() => handleLocalityToggle(loc)}
-                        className={`px-3 py-1.5 rounded-lg border font-bold transition-all cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-md border font-bold transition-all cursor-pointer ${
                           selectedLocalities.includes(loc)
                             ? 'border-sky-500 bg-sky-50 text-sky-700 shadow-2xs'
                             : 'border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -1709,41 +1522,43 @@ export default function SearchScreen() {
                 </div>
               )}
 
-              {/* 4. Amenities */}
-              <div>
-                <div className="font-extrabold text-slate-800 uppercase tracking-wider mb-2">Popular Amenities</div>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { id: 'Breakfast', label: 'Free Breakfast' },
-                    { id: 'Swimming Pool', label: 'Swimming Pool' },
-                    { id: 'WiFi', label: 'Free WiFi' },
-                    { id: 'Air Conditioning', label: 'AC' },
-                    { id: 'Spa', label: 'Spa & Wellness' },
-                    { id: 'Parking', label: 'Free Parking' }
-                  ].map(am => (
-                    <button
-                      key={am.id}
-                      type="button"
-                      onClick={() => handleAmenityToggle(am.id)}
-                      className={`p-2 rounded-xl border text-left font-bold transition-all cursor-pointer ${
-                        selectedAmenities.includes(am.id)
-                          ? 'border-sky-500 bg-sky-50 text-sky-700 shadow-2xs'
-                          : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      {selectedAmenities.includes(am.id) ? '✓ ' : '+ '}{am.label}
-                    </button>
-                  ))}
+              {/* 7. Dynamic Amenities from Real Hotel Data */}
+              {dynamicFilterAmenities.length > 0 && (
+                <div className="pt-5 space-y-2.5">
+                  <div className="font-extrabold text-slate-800 uppercase tracking-wider text-[11px]">Property Amenities</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {dynamicFilterAmenities.map(am => (
+                      <button
+                        key={am}
+                        type="button"
+                        onClick={() => handleAmenityToggle(am)}
+                        className={`p-2.5 rounded-md border text-left font-bold transition-all cursor-pointer ${
+                          selectedAmenities.includes(am)
+                            ? 'border-sky-500 bg-sky-50 text-sky-700 shadow-2xs'
+                            : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        {selectedAmenities.includes(am) ? '✓ ' : '+ '}{am}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Bottom Apply Action */}
-            <div className="p-4 border-t border-slate-100 bg-white shadow-md">
+            <div className="p-4 border-t border-slate-100 bg-white sticky bottom-0 z-10 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleClearAllFilters}
+                className="w-1/3 py-3 rounded-md border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-all cursor-pointer text-center"
+              >
+                Reset
+              </button>
               <button
                 type="button"
                 onClick={() => setIsMobileFiltersOpen(false)}
-                className="w-full py-3 rounded-xl bg-slate-900 hover:bg-black text-white font-extrabold text-sm shadow-md transition-all active:scale-[0.98] cursor-pointer text-center"
+                className="w-2/3 py-3 rounded-md bg-slate-900 hover:bg-black text-white font-extrabold text-xs shadow-md transition-all active:scale-[0.98] cursor-pointer text-center"
               >
                 Apply &amp; Show {sortedHotels.length} {sortedHotels.length === 1 ? 'Stay' : 'Stays'}
               </button>

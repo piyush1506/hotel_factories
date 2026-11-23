@@ -57,12 +57,19 @@ export default function VoucherSheet() {
   const adults = rawGuestCount && typeof rawGuestCount === 'object'
     ? Number(rawGuestCount.adults) || 0
     : Number(rawGuestCount) || 0;
+  const adultsMale = rawGuestCount && typeof rawGuestCount === 'object'
+    ? Number(rawGuestCount.adultsMale) || 0
+    : 0;
+  const adultsFemale = rawGuestCount && typeof rawGuestCount === 'object'
+    ? Number(rawGuestCount.adultsFemale) || 0
+    : 0;
   const children = rawGuestCount && typeof rawGuestCount === 'object'
     ? Number(rawGuestCount.children) || 0
     : 0;
   const resolvedAdults = adults || (children > 0 ? 0 : 2);
   const totalGuests = resolvedAdults + children;
-  const guestSummary = `${totalGuests} ${totalGuests === 1 ? 'guest' : 'guests'} · ${roomsCount} ${roomsCount === 1 ? 'room' : 'rooms'}`;
+  const genderBreakdown = (adultsMale > 0 || adultsFemale > 0) ? ` (${adultsMale}M, ${adultsFemale}F)` : '';
+  const guestSummary = `${totalGuests} ${totalGuests === 1 ? 'guest' : 'guests'}${genderBreakdown} · ${roomsCount} ${roomsCount === 1 ? 'room' : 'rooms'}`;
 
   const amountPaid = Number(b.totalAmount ?? b.pricing?.finalAmount ?? b.baseRoomPrice) || 0;
   const baseTariff = Number(b.totalBaseTariff)
@@ -378,7 +385,7 @@ export default function VoucherSheet() {
 
             {/* Live Dynamic QR Check-in Pass */}
             <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-              <DynamicQRCode booking={b} size={80} showLabel={true} />
+              <DynamicQRCode booking={b} size={240} showLabel={true} />
             </section>
 
             {/* Payment summary */}

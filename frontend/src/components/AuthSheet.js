@@ -164,6 +164,30 @@ export default function AuthSheet() {
 
               <button
                 type="button"
+                className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-2 border border-slate-200"
+                onClick={() => {
+                  switchNav('saved');
+                  closeAllSheets();
+                }}
+              >
+                <i className="fa-solid fa-heart text-rose-500" /> Saved Wishlist
+              </button>
+
+              {(user.role === 'admin' || user.role === 'hotel_owner') && (
+                <button
+                  type="button"
+                  className="w-full py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-2 border border-amber-200"
+                  onClick={() => {
+                    switchNav('admin');
+                    closeAllSheets();
+                  }}
+                >
+                  <i className="fa-solid fa-crown text-amber-500" /> Partner / Admin Console
+                </button>
+              )}
+
+              <button
+                type="button"
                 className="mmt-select-room-btn w-full py-2.5 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold text-xs transition-colors cursor-pointer border border-rose-200 shadow-none flex items-center justify-center gap-1.5"
                 onClick={() => {
                   logout();
